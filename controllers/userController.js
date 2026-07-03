@@ -266,7 +266,11 @@ const getAllUsers = async (req, res) => {
       ];
     }
     if (role && role !== "all") {
-      query.role = role;
+      if (role.includes(",")) {
+        query.role = { $in: role.split(",") };
+      } else {
+        query.role = role;
+      }
     }
     if (status && status !== "all") {
       query.status = status;
@@ -447,6 +451,10 @@ const updateUser = asyncHandler(async (req, res) => {
       user.bankAccountNumber = req.body.bankAccountNumber || user.bankAccountNumber;
       user.ifscCode = req.body.ifscCode || user.ifscCode;
       user.upiId = req.body.upiId || user.upiId;
+      // SEO Fields for Professional/Architect Profile
+      if (req.body.seoTitle !== undefined) user.seoTitle = req.body.seoTitle;
+      if (req.body.seoDescription !== undefined) user.seoDescription = req.body.seoDescription;
+      if (req.body.seoKeywords !== undefined) user.seoKeywords = req.body.seoKeywords;
       break;
     case "seller":
       user.businessName = req.body.name || req.body.businessName || user.businessName;
@@ -499,6 +507,10 @@ const updateUser = asyncHandler(async (req, res) => {
         user.premiumExpiresAt = req.body.premiumExpiresAt;
       }
       user.profession = req.body.profession || user.profession;
+      // SEO Fields for Contractor/Architect Profile
+      if (req.body.seoTitle !== undefined) user.seoTitle = req.body.seoTitle;
+      if (req.body.seoDescription !== undefined) user.seoDescription = req.body.seoDescription;
+      if (req.body.seoKeywords !== undefined) user.seoKeywords = req.body.seoKeywords;
       break;
   }
 
