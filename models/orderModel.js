@@ -26,7 +26,7 @@ const orderSchema = mongoose.Schema(
       {
         productId: {
           type: mongoose.Schema.Types.ObjectId,
-          required: true,
+          required: false,
           ref: "Product",
         },
         name: { type: String, required: true },
@@ -40,6 +40,11 @@ const orderSchema = mongoose.Schema(
         },
       },
     ],
+    orderType: {
+      type: String,
+      enum: ["product", "subscription"],
+      default: "product",
+    },
     shippingAddress: {
       name: { type: String, required: true },
       email: { type: String, required: true },

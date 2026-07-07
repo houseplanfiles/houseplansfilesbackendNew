@@ -48,6 +48,9 @@ const validateRoleFields = (role, body) => {
         contractorType: contractorType || "Normal",
         isApproved: false,
         status: "Pending",
+        selectedPlan: body.selectedPlan || null,
+        profileCreation: body.profileCreation === "true" || body.profileCreation === true || false,
+        profileStoreManagement: body.profileStoreManagement || "None",
       };
     case "seller":
       if (!businessName || !address || !city)
@@ -55,6 +58,7 @@ const validateRoleFields = (role, body) => {
           "Business Name, Address, and City are required"
         );
       return {
+        name: name || "",
         businessName,
         address,
         city,
@@ -67,6 +71,9 @@ const validateRoleFields = (role, body) => {
         businessType: businessType || "Both",
         isApproved: false,
         status: "Pending",
+        selectedPlan: body.selectedPlan || null,
+        profileCreation: body.profileCreation === "true" || body.profileCreation === true || false,
+        profileStoreManagement: body.profileStoreManagement || "None",
       };
     case "Contractor":
       if (!name || !address || !city || !experience || !profession)
@@ -86,6 +93,9 @@ const validateRoleFields = (role, body) => {
         charges: body.charges || "",
         isApproved: false,
         status: "Pending",
+        selectedPlan: body.selectedPlan || null,
+        profileCreation: body.profileCreation === "true" || body.profileCreation === true || false,
+        profileStoreManagement: body.profileStoreManagement || "None",
       };
     case "admin":
       if (!name) throw new Error("Full Name is required for Admin");
@@ -457,7 +467,8 @@ const updateUser = asyncHandler(async (req, res) => {
       if (req.body.seoKeywords !== undefined) user.seoKeywords = req.body.seoKeywords;
       break;
     case "seller":
-      user.businessName = req.body.name || req.body.businessName || user.businessName;
+      user.name = req.body.name || user.name;
+      user.businessName = req.body.businessName || user.businessName;
       user.address = req.body.address || user.address;
       user.city = req.body.city || user.city;
       user.materialType = req.body.materialType || user.materialType;
@@ -523,6 +534,18 @@ const updateUser = asyncHandler(async (req, res) => {
       user.isApproved = req.body.isApproved;
       user.status = req.body.isApproved ? "Approved" : "Pending";
     }
+    if (req.body.selectedPlan !== undefined) {
+      user.selectedPlan = req.body.selectedPlan;
+    }
+    if (req.body.profileCreation !== undefined) {
+      user.profileCreation = req.body.profileCreation === "true" || req.body.profileCreation === true;
+    }
+    if (req.body.profileStoreManagement !== undefined) {
+      user.profileStoreManagement = req.body.profileStoreManagement;
+    }
+    if (req.body.paymentStatus !== undefined) {
+      user.paymentStatus = req.body.paymentStatus;
+    }
   }
 
   const updatedUser = await user.save();
@@ -552,6 +575,10 @@ const updateUser = asyncHandler(async (req, res) => {
     ifscCode: updatedUser.ifscCode,
     upiId: updatedUser.upiId,
     contractorType: updatedUser.contractorType,
+    selectedPlan: updatedUser.selectedPlan,
+    profileCreation: updatedUser.profileCreation,
+    profileStoreManagement: updatedUser.profileStoreManagement,
+    paymentStatus: updatedUser.paymentStatus,
     coverPhotoUrl: updatedUser.coverPhotoUrl,
     packages: updatedUser.packages,
     workSamples: updatedUser.workSamples,

@@ -5,6 +5,7 @@ const axios = require("axios");
 const Order = require("../models/orderModel.js");
 const Product = require("../models/productModel.js");
 const ProfessionalPlan = require("../models/professionalPlanModel.js");
+const User = require("../models/userModel.js");
 
 // Helper to clean env variables
 const getEnv = (key) => (process.env[key] ? process.env[key].trim() : "");
@@ -55,6 +56,58 @@ const updateOrderAfterPayment = async (order, paymentDetails = {}) => {
     order.orderItems
   );
 
+  // If subscription order, update User's plan and paymentStatus
+  if (order.orderType === "subscription" && order.user) {
+    try {
+      const user = await User.findById(order.user);
+      if (user) {
+        order.orderItems.forEach((item) => {
+          const name = item.name.toLowerCase();
+          if (name.includes("basic")) {
+            user.selectedPlan = "Basic";
+            user.contractorType = "Normal";
+          } else if (name.includes("standard")) {
+            user.selectedPlan = "Standard";
+            user.contractorType = "Verified";
+          } else if (name.includes("premium+")) {
+            user.selectedPlan = "Premium+";
+            user.contractorType = "Premium";
+            user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 12 months
+          } else if (name.includes("premium")) {
+            user.selectedPlan = "Premium";
+            user.contractorType = "Premium";
+            user.premiumExpiresAt = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000); // 6 months
+          }
+
+          if (name.includes("profile creation")) {
+            user.profileCreation = true;
+          }
+          if (name.includes("6 month profile") || name.includes("6-month profile")) {
+            user.profileStoreManagement = "6_Month";
+          }
+          if (name.includes("1 year profile") || name.includes("1-year profile") || name.includes("1 year store") || name.includes("1-year store")) {
+            user.profileStoreManagement = "1_Year";
+          }
+        });
+
+        user.paymentStatus = "Paid";
+        user.isApproved = true; // Auto approve upon payment
+        user.status = "Approved";
+        user.paymentDetails = {
+          orderId: order.orderId,
+          paymentId: paymentDetails.id || "",
+          amountPaid: order.itemsPrice,
+          gstPaid: order.taxPrice,
+          paidAt: new Date()
+        };
+
+        await user.save();
+      }
+    } catch (err) {
+      console.error("Failed to update user subscription after payment:", err);
+    }
+  }
+
   return await order.save();
 };
 
@@ -76,32 +129,45 @@ const addOrderItems = asyncHandler(async (req, res) => {
     throw new Error("No order items");
   }
 
-  const processedOrderItems = await Promise.all(
-    orderItems.map(async (item) => {
-      let productOwner = null;
-      const profPlan = await ProfessionalPlan.findById(item.productId).select(
-        "user"
-      );
-      if (profPlan) {
-        productOwner = profPlan.user;
-      } else {
-        const adminProduct = await Product.findById(item.productId).select(
-          "user"
-        );
-        if (adminProduct && adminProduct.user) {
-          productOwner = adminProduct.user;
+  let processedOrderItems = [];
+  if (req.body.orderType === "subscription") {
+    processedOrderItems = orderItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity || 1,
+      price: item.price,
+      productId: undefined,
+      professional: null,
+    }));
+  } else {
+    processedOrderItems = await Promise.all(
+      orderItems.map(async (item) => {
+        let productOwner = null;
+        if (item.productId) {
+          const profPlan = await ProfessionalPlan.findById(item.productId).select(
+            "user"
+          );
+          if (profPlan) {
+            productOwner = profPlan.user;
+          } else {
+            const adminProduct = await Product.findById(item.productId).select(
+              "user"
+            );
+            if (adminProduct && adminProduct.user) {
+              productOwner = adminProduct.user;
+            }
+          }
         }
-      }
-      return {
-        ...item,
-        productId: item.productId,
-        professional: productOwner,
-      };
-    })
-  );
+        return {
+          ...item,
+          productId: item.productId,
+          professional: productOwner,
+        };
+      })
+    );
+  }
 
   const order = new Order({
-    user: req.user ? req.user._id : null,
+    user: req.user ? req.user._id : (req.body.userId || null),
     orderItems: processedOrderItems,
     shippingAddress,
     paymentMethod,
@@ -109,6 +175,7 @@ const addOrderItems = asyncHandler(async (req, res) => {
     taxPrice,
     shippingPrice,
     totalPrice,
+    orderType: req.body.orderType || "product",
   });
 
   const createdOrder = await order.save();

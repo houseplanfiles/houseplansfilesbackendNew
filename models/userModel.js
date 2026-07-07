@@ -42,6 +42,31 @@ const userSchema = mongoose.Schema(
     },
     premiumExpiresAt: { type: Date, default: null },
 
+    // --- Subscription & Payment Fields ---
+    selectedPlan: { 
+      type: String, 
+      enum: ["Basic", "Standard", "Premium", "Premium+"], 
+      default: null 
+    },
+    profileCreation: { type: Boolean, default: false },
+    profileStoreManagement: { 
+      type: String, 
+      enum: ["None", "6_Month", "1_Year"], 
+      default: "None" 
+    },
+    paymentStatus: { 
+      type: String, 
+      enum: ["Unpaid", "Paid"], 
+      default: "Unpaid" 
+    },
+    paymentDetails: {
+      orderId: { type: String },
+      paymentId: { type: String },
+      amountPaid: { type: Number },
+      gstPaid: { type: Number },
+      paidAt: { type: Date }
+    },
+
     // --- NEW: Contractor Detailed Profile (For Premium) ---
     coverPhotoUrl: { type: String },
     packages: [
