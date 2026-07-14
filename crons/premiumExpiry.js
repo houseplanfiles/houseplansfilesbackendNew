@@ -13,7 +13,7 @@ const startPremiumExpiryCron = () => {
       const now = new Date();
       const result = await User.updateMany(
         {
-          contractorType: "Premium",
+          contractorType: { $in: ["Premium", "Verified"] },
           premiumExpiresAt: { $lte: now, $ne: null },
         },
         {
