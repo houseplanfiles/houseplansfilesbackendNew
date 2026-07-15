@@ -13,6 +13,7 @@ const createStandardRequest = asyncHandler(async (req, res) => {
     spaceType,
     preferredStyle,
     projectDetails,
+    category,
   } = req.body;
 
   if (
@@ -38,6 +39,7 @@ const createStandardRequest = asyncHandler(async (req, res) => {
     spaceType,
     preferredStyle,
     projectDetails,
+    category,
   });
 
   res.status(201).json({
