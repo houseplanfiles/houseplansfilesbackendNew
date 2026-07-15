@@ -12,6 +12,7 @@ const createPremiumRequest = asyncHandler(async (req, res) => {
     spaceType,
     preferredStyle,
     projectDetails,
+    category,
   } = req.body;
 
   if (
@@ -37,6 +38,7 @@ const createPremiumRequest = asyncHandler(async (req, res) => {
     spaceType,
     preferredStyle,
     projectDetails,
+    category,
   });
 
   res.status(201).json({

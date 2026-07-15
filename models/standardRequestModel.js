@@ -40,6 +40,9 @@ const standardRequestSchema = mongoose.Schema(
       type: String,
       required: [true, "Project details are required"],
     },
+    category: {
+      type: String,
+    },
     status: {
       type: String,
       enum: ["Pending", "Contacted", "In Progress", "Completed", "Cancelled"],
