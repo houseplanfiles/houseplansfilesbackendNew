@@ -21,7 +21,7 @@ const createStandardRequest = asyncHandler(async (req, res) => {
     !name ||
     !whatsapp ||
     !city ||
-    !totalArea ||
+    (totalArea === undefined || totalArea === null || totalArea === "") ||
     !projectDetails
   ) {
     res.status(400);
