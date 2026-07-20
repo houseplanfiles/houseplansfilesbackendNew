@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getLeads,
   getLeadById,
+  getAdminAllLeads,
   createLead,
   updateLead,
   deleteLead,
@@ -10,6 +11,10 @@ const {
   verifyLeadPayment,
 } = require("../controllers/leadController");
 const { protect, admin, softProtect } = require("../middleware/authMiddleware");
+
+// Admin-only: full unmasked view of ALL inquiries+leads
+router.route("/admin/all").get(protect, admin, getAdminAllLeads);
+
 
 router
   .route("/")

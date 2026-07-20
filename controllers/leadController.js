@@ -2,6 +2,9 @@ const asyncHandler = require("express-async-handler");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Lead = require("../models/leadModel");
+const Inquiry = require("../models/inquiryModel");
+const SellerInquiry = require("../models/sellerinquiryModel");
+const CorporateInquiry = require("../models/corporateInquiryModel");
 
 // Helper to clean env variables
 const getEnv = (key) => (process.env[key] ? process.env[key].trim() : "");
@@ -11,32 +14,124 @@ const razorpay = new Razorpay({
   key_secret: getEnv("RAZORPAY_KEY_SECRET"),
 });
 
-// @desc    Get all leads (Privacy-Masked for non-buyers)
+// Helper: mask contact details for unowned leads
+const maskLead = (leadObj) => {
+  leadObj.clientName = "Client (Locked 🔒)";
+  leadObj.clientPhone = "Locked — Pay to Unlock";
+  leadObj.clientEmail = "Locked — Pay to Unlock";
+  return leadObj;
+};
+
+// @desc    Get ALL leads — aggregated from Inquiry + SellerInquiry + CorporateInquiry + Lead models
 // @route   GET /api/leads
 // @access  Public (softProtect)
 const getLeads = asyncHandler(async (req, res) => {
-  const leads = await Lead.find({}).sort({ createdAt: -1 });
-  
   const currentUserId = req.user ? req.user._id.toString() : null;
 
-  const maskedLeads = leads.map((lead) => {
-    const isBuyer = currentUserId && lead.buyer && lead.buyer.toString() === currentUserId;
-    
-    // Mask sensitive details if it's available or bought by someone else
-    if (lead.status === "Available" || !isBuyer) {
-      const leadObj = lead.toObject();
-      leadObj.clientName = "Client (Locked)";
-      leadObj.clientPhone = "Locked (Pay to Unlock)";
-      leadObj.clientEmail = "Locked (Pay to Unlock)";
-      return leadObj;
+  // 1. Fetch from all inquiry sources in parallel
+  const [adminLeads, contractorInquiries, sellerInquiries, corporateInquiries] =
+    await Promise.all([
+      Lead.find({}).sort({ createdAt: -1 }).lean(),
+      Inquiry.find({}).populate("recipient", "name city profession").sort({ createdAt: -1 }).lean(),
+      SellerInquiry.find({}).populate("product", "name category").sort({ createdAt: -1 }).lean(),
+      CorporateInquiry.find({}).sort({ createdAt: -1 }).lean(),
+    ]);
+
+  // 2. Normalize: Convert Inquiry → lead shape
+  const fromContractor = contractorInquiries.map((inq) => ({
+    _id: inq._id,
+    sourceType: "contractor_inquiry",
+    title: `Enquiry for ${inq.recipientInfo?.role || "Professional"}: ${inq.recipientInfo?.name || ""}`,
+    category: inq.recipientInfo?.role || "General",
+    city: inq.recipientInfo?.city || "India",
+    budget: "As per discussion",
+    requirements: inq.requirements,
+    price: 0, // free or admin can set from Lead model
+    clientName: inq.senderName,
+    clientPhone: inq.senderWhatsapp,
+    clientEmail: inq.senderEmail,
+    status: "Available",
+    buyer: null,
+    createdAt: inq.createdAt,
+  }));
+
+  // 3. Normalize: Convert SellerInquiry → lead shape
+  const fromSeller = sellerInquiries.map((inq) => ({
+    _id: inq._id,
+    sourceType: "seller_inquiry",
+    title: `Product Enquiry: ${inq.product?.name || "Product"}`,
+    category: inq.product?.category || "Building Material",
+    city: "India",
+    budget: "As per discussion",
+    requirements: inq.message,
+    price: 0,
+    clientName: inq.name,
+    clientPhone: inq.phone,
+    clientEmail: inq.email,
+    status: "Available",
+    buyer: null,
+    createdAt: inq.createdAt,
+  }));
+
+  // 4. Normalize: Convert CorporateInquiry → lead shape
+  const fromCorporate = corporateInquiries.map((inq) => ({
+    _id: inq._id,
+    sourceType: "corporate_inquiry",
+    title: `Corporate Project: ${inq.projectType} — ${inq.companyName}`,
+    category: inq.projectType || "Corporate",
+    city: "India",
+    budget: "Enterprise Budget",
+    requirements: inq.projectDetails,
+    price: 0,
+    clientName: inq.contactPerson,
+    clientPhone: inq.phoneNumber,
+    clientEmail: inq.workEmail,
+    status: "Available",
+    buyer: null,
+    createdAt: inq.createdAt,
+  }));
+
+  // 5. Admin-created leads with pricing / sold status take priority
+  const fromAdminLeads = adminLeads.map((lead) => ({
+    ...lead,
+    sourceType: "admin_lead",
+  }));
+
+  // 6. Merge all and sort by date descending
+  let allLeads = [
+    ...fromAdminLeads,
+    ...fromContractor,
+    ...fromSeller,
+    ...fromCorporate,
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // 7. Mask contact details unless buyer === current user (for admin leads)
+  allLeads = allLeads.map((lead) => {
+    const isBuyer =
+      currentUserId &&
+      lead.buyer &&
+      lead.buyer.toString() === currentUserId;
+
+    // For admin leads that are sold, reveal to buyer only
+    if (lead.sourceType === "admin_lead") {
+      if (lead.status === "Sold" && !isBuyer) {
+        return maskLead({ ...lead });
+      }
+      if (lead.status === "Available") {
+        return maskLead({ ...lead });
+      }
+      return lead;
     }
-    return lead;
+
+    // For inquiry-based leads (always Available, not yet monetized)
+    // Mask contact details — these need to be purchased via admin-created lead
+    return maskLead({ ...lead });
   });
 
-  res.json(maskedLeads);
+  res.json(allLeads);
 });
 
-// @desc    Get single lead by ID (Privacy-Masked)
+// @desc    Get single lead by ID
 // @route   GET /api/leads/:id
 // @access  Public (softProtect)
 const getLeadById = asyncHandler(async (req, res) => {
@@ -50,11 +145,7 @@ const getLeadById = asyncHandler(async (req, res) => {
   const isBuyer = currentUserId && lead.buyer && lead.buyer.toString() === currentUserId;
 
   if (lead.status === "Available" || !isBuyer) {
-    const leadObj = lead.toObject();
-    leadObj.clientName = "Client (Locked)";
-    leadObj.clientPhone = "Locked (Pay to Unlock)";
-    leadObj.clientEmail = "Locked (Pay to Unlock)";
-    return res.json(leadObj);
+    return res.json(maskLead({ ...lead.toObject() }));
   }
 
   res.json(lead);
@@ -184,6 +275,81 @@ const createLeadRazorpayOrder = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Admin: Get ALL leads+inquiries UNMASKED (full contact details)
+// @route   GET /api/leads/admin/all
+// @access  Private/Admin
+const getAdminAllLeads = asyncHandler(async (req, res) => {
+  const [adminLeads, contractorInquiries, sellerInquiries, corporateInquiries] =
+    await Promise.all([
+      Lead.find({}).sort({ createdAt: -1 }).lean(),
+      Inquiry.find({}).populate("recipient", "name city profession").sort({ createdAt: -1 }).lean(),
+      SellerInquiry.find({}).populate("product", "name category").sort({ createdAt: -1 }).lean(),
+      CorporateInquiry.find({}).sort({ createdAt: -1 }).lean(),
+    ]);
+
+  const fromContractor = contractorInquiries.map((inq) => ({
+    _id: inq._id,
+    sourceType: "contractor_inquiry",
+    title: `Enquiry for ${inq.recipientInfo?.role || "Professional"}: ${inq.recipientInfo?.name || ""}`,
+    category: inq.recipientInfo?.role || "General",
+    city: inq.recipientInfo?.city || "India",
+    budget: "As per discussion",
+    requirements: inq.requirements,
+    price: 0,
+    clientName: inq.senderName,
+    clientPhone: inq.senderWhatsapp,
+    clientEmail: inq.senderEmail,
+    status: "Available",
+    buyer: null,
+    createdAt: inq.createdAt,
+  }));
+
+  const fromSeller = sellerInquiries.map((inq) => ({
+    _id: inq._id,
+    sourceType: "seller_inquiry",
+    title: `Product Enquiry: ${inq.product?.name || "Product"}`,
+    category: inq.product?.category || "Building Material",
+    city: "India",
+    budget: "As per discussion",
+    requirements: inq.message,
+    price: 0,
+    clientName: inq.name,
+    clientPhone: inq.phone,
+    clientEmail: inq.email,
+    status: "Available",
+    buyer: null,
+    createdAt: inq.createdAt,
+  }));
+
+  const fromCorporate = corporateInquiries.map((inq) => ({
+    _id: inq._id,
+    sourceType: "corporate_inquiry",
+    title: `Corporate Project: ${inq.projectType} — ${inq.companyName}`,
+    category: inq.projectType || "Corporate",
+    city: "India",
+    budget: "Enterprise Budget",
+    requirements: inq.projectDetails,
+    price: 0,
+    clientName: inq.contactPerson,
+    clientPhone: inq.phoneNumber,
+    clientEmail: inq.workEmail,
+    status: "Available",
+    buyer: null,
+    createdAt: inq.createdAt,
+  }));
+
+  const fromAdminLeads = adminLeads.map((lead) => ({ ...lead, sourceType: "admin_lead" }));
+
+  const allLeads = [
+    ...fromAdminLeads,
+    ...fromContractor,
+    ...fromSeller,
+    ...fromCorporate,
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  res.json(allLeads); // No masking — admin sees everything
+});
+
 // @desc    Verify Razorpay payment and mark lead as Sold
 // @route   POST /api/leads/:id/verify
 // @access  Private
@@ -230,6 +396,7 @@ const verifyLeadPayment = asyncHandler(async (req, res) => {
 module.exports = {
   getLeads,
   getLeadById,
+  getAdminAllLeads,
   createLead,
   updateLead,
   deleteLead,
