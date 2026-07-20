@@ -32,6 +32,7 @@ const shareRoutes = require("./routes/shareRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const feedRoutes = require("./routes/feed.route");
 const sellerDashboardRoutes = require("./routes/sellerDashboardRoutes");
+const leadRoutes = require("./routes/leadRoutes");
 const startPremiumExpiryCron = require("./crons/premiumExpiry");
 dotenv.config();
 connectDB();
@@ -116,6 +117,7 @@ app.use("/share", shareRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/feed", feedRoutes);
 app.use("/api/seller-dashboard", sellerDashboardRoutes);
+app.use("/api/leads", leadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
