@@ -14,11 +14,17 @@ const razorpay = new Razorpay({
   key_secret: getEnv("RAZORPAY_KEY_SECRET"),
 });
 
-// Helper: mask contact details for unowned leads
+// Helper: mask contact details — add explicit contactRevealed flag
 const maskLead = (leadObj) => {
-  leadObj.clientName = "Client (Locked 🔒)";
-  leadObj.clientPhone = "Locked — Pay to Unlock";
-  leadObj.clientEmail = "Locked — Pay to Unlock";
+  leadObj.clientName = "";
+  leadObj.clientPhone = "";
+  leadObj.clientEmail = "";
+  leadObj.contactRevealed = false;
+  return leadObj;
+};
+
+const revealLead = (leadObj) => {
+  leadObj.contactRevealed = true;
   return leadObj;
 };
 
@@ -46,7 +52,7 @@ const getLeads = asyncHandler(async (req, res) => {
     city: inq.recipientInfo?.city || "India",
     budget: "As per discussion",
     requirements: inq.requirements,
-    price: 0, // free or admin can set from Lead model
+    price: 0,
     clientName: inq.senderName,
     clientPhone: inq.senderWhatsapp,
     clientEmail: inq.senderEmail,
@@ -77,7 +83,7 @@ const getLeads = asyncHandler(async (req, res) => {
   const fromCorporate = corporateInquiries.map((inq) => ({
     _id: inq._id,
     sourceType: "corporate_inquiry",
-    title: `Corporate Project: ${inq.projectType} — ${inq.companyName}`,
+    title: `Corporate Project: ${inq.projectType} - ${inq.companyName}`,
     category: inq.projectType || "Corporate",
     city: "India",
     budget: "Enterprise Budget",
@@ -91,13 +97,13 @@ const getLeads = asyncHandler(async (req, res) => {
     createdAt: inq.createdAt,
   }));
 
-  // 5. Admin-created leads with pricing / sold status take priority
+  // 5. Admin-created leads
   const fromAdminLeads = adminLeads.map((lead) => ({
     ...lead,
     sourceType: "admin_lead",
   }));
 
-  // 6. Merge all and sort by date descending
+  // 6. Merge and sort
   let allLeads = [
     ...fromAdminLeads,
     ...fromContractor,
@@ -105,31 +111,29 @@ const getLeads = asyncHandler(async (req, res) => {
     ...fromCorporate,
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  // 7. Mask contact details unless buyer === current user (for admin leads)
+  // 7. Decide what to reveal using explicit boolean flag
   allLeads = allLeads.map((lead) => {
     const isBuyer =
       currentUserId &&
       lead.buyer &&
       lead.buyer.toString() === currentUserId;
 
-    // For admin leads that are sold, reveal to buyer only
     if (lead.sourceType === "admin_lead") {
-      if (lead.status === "Sold" && !isBuyer) {
-        return maskLead({ ...lead });
+      // Sold lead: only buyer sees contact
+      if (lead.status === "Sold") {
+        return isBuyer ? revealLead({ ...lead }) : maskLead({ ...lead });
       }
-      if (lead.status === "Available") {
-        return maskLead({ ...lead });
-      }
-      return lead;
+      // Available: always mask until purchased
+      return maskLead({ ...lead });
     }
 
-    // For inquiry-based leads (always Available, not yet monetized)
-    // Mask contact details — these need to be purchased via admin-created lead
+    // Inquiry-based leads: always masked (admin hasn't priced them yet)
     return maskLead({ ...lead });
   });
 
   res.json(allLeads);
 });
+
 
 // @desc    Get single lead by ID
 // @route   GET /api/leads/:id
