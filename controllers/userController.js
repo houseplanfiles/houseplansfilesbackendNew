@@ -529,8 +529,7 @@ const updateUser = asyncHandler(async (req, res) => {
     if (req.body.status) {
       user.status = req.body.status;
       user.isApproved = req.body.status === "Approved";
-    }
-    if (req.body.isApproved !== undefined) {
+    } else if (req.body.isApproved !== undefined) {
       user.isApproved = req.body.isApproved;
       user.status = req.body.isApproved ? "Approved" : "Pending";
     }
