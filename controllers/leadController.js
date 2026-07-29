@@ -107,8 +107,6 @@ const getLeads = asyncHandler(async (req, res) => {
   let allLeads = [
     ...fromAdminLeads,
     ...fromContractor,
-    ...fromSeller,
-    ...fromCorporate,
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // 7. Decide what to reveal using explicit boolean flag
