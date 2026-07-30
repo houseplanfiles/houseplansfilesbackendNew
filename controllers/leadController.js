@@ -28,104 +28,33 @@ const revealLead = (leadObj) => {
   return leadObj;
 };
 
-// @desc    Get ALL leads — aggregated from Inquiry + SellerInquiry + CorporateInquiry + Lead models
+// @desc    Get ALL leads — only from Lead model
 // @route   GET /api/leads
 // @access  Public (softProtect)
 const getLeads = asyncHandler(async (req, res) => {
   const currentUserId = req.user ? req.user._id.toString() : null;
 
-  // 1. Fetch from all inquiry sources in parallel
-  const [adminLeads, contractorInquiries, sellerInquiries, corporateInquiries] =
-    await Promise.all([
-      Lead.find({}).sort({ createdAt: -1 }).lean(),
-      Inquiry.find({}).populate("recipient", "name city profession").sort({ createdAt: -1 }).lean(),
-      SellerInquiry.find({}).populate("product", "name category").sort({ createdAt: -1 }).lean(),
-      CorporateInquiry.find({}).sort({ createdAt: -1 }).lean(),
-    ]);
+  // 1. Fetch from Lead model only
+  const adminLeads = await Lead.find({}).sort({ createdAt: -1 }).lean();
 
-  // 2. Normalize: Convert Inquiry → lead shape
-  const fromContractor = contractorInquiries.map((inq) => ({
-    _id: inq._id,
-    sourceType: "contractor_inquiry",
-    title: `Enquiry for ${inq.recipientInfo?.role || "Professional"}: ${inq.recipientInfo?.name || ""}`,
-    category: inq.recipientInfo?.role || "General",
-    city: inq.recipientInfo?.city || "India",
-    budget: "As per discussion",
-    requirements: inq.requirements,
-    price: 0,
-    clientName: inq.senderName,
-    clientPhone: inq.senderWhatsapp,
-    clientEmail: inq.senderEmail,
-    status: "Available",
-    buyer: null,
-    createdAt: inq.createdAt,
-  }));
-
-  // 3. Normalize: Convert SellerInquiry → lead shape
-  const fromSeller = sellerInquiries.map((inq) => ({
-    _id: inq._id,
-    sourceType: "seller_inquiry",
-    title: `Product Enquiry: ${inq.product?.name || "Product"}`,
-    category: inq.product?.category || "Building Material",
-    city: "India",
-    budget: "As per discussion",
-    requirements: inq.message,
-    price: 0,
-    clientName: inq.name,
-    clientPhone: inq.phone,
-    clientEmail: inq.email,
-    status: "Available",
-    buyer: null,
-    createdAt: inq.createdAt,
-  }));
-
-  // 4. Normalize: Convert CorporateInquiry → lead shape
-  const fromCorporate = corporateInquiries.map((inq) => ({
-    _id: inq._id,
-    sourceType: "corporate_inquiry",
-    title: `Corporate Project: ${inq.projectType} - ${inq.companyName}`,
-    category: inq.projectType || "Corporate",
-    city: "India",
-    budget: "Enterprise Budget",
-    requirements: inq.projectDetails,
-    price: 0,
-    clientName: inq.contactPerson,
-    clientPhone: inq.phoneNumber,
-    clientEmail: inq.workEmail,
-    status: "Available",
-    buyer: null,
-    createdAt: inq.createdAt,
-  }));
-
-  // 5. Admin-created leads
-  const fromAdminLeads = adminLeads.map((lead) => ({
+  // 2. Add sourceType
+  let allLeads = adminLeads.map((lead) => ({
     ...lead,
     sourceType: "admin_lead",
   }));
 
-  // 6. Merge and sort
-  let allLeads = [
-    ...fromAdminLeads,
-    ...fromContractor,
-  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  // 7. Decide what to reveal using explicit boolean flag
+  // 3. Decide what to reveal using explicit boolean flag
   allLeads = allLeads.map((lead) => {
     const isBuyer =
       currentUserId &&
       lead.buyer &&
       lead.buyer.toString() === currentUserId;
 
-    if (lead.sourceType === "admin_lead") {
-      // Sold lead: only buyer sees contact
-      if (lead.status === "Sold") {
-        return isBuyer ? revealLead({ ...lead }) : maskLead({ ...lead });
-      }
-      // Available: always mask until purchased
-      return maskLead({ ...lead });
+    // Sold lead: only buyer sees contact
+    if (lead.status === "Sold") {
+      return isBuyer ? revealLead({ ...lead }) : maskLead({ ...lead });
     }
-
-    // Inquiry-based leads: always masked (admin hasn't priced them yet)
+    // Available: always mask until purchased
     return maskLead({ ...lead });
   });
 
