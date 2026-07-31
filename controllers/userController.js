@@ -156,6 +156,8 @@ const registerUser = asyncHandler(async (req, res) => {
       name: getUserDisplayName(user),
       isApproved: user.isApproved,
       status: user.status,
+      profileViews: user.profileViews,
+      contactClicks: user.contactClicks,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -245,6 +247,8 @@ const loginUser = asyncHandler(async (req, res) => {
       qualification: user.qualification,
       skills: user.skills,
       charges: user.charges,
+      profileViews: user.profileViews,
+      contactClicks: user.contactClicks,
       token: generateToken(user._id),
     });
   } else {
