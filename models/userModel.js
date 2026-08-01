@@ -134,6 +134,8 @@ const userSchema = mongoose.Schema(
     // --- Analytics Tracking Fields ---
     profileViews: { type: Number, default: 0 },
     contactClicks: { type: Number, default: 0 },
+    whatsappClicks: { type: Number, default: 0 },
+    callClicks: { type: Number, default: 0 },
   },
   {
     timestamps: true,

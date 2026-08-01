@@ -26,6 +26,10 @@ const trackAnalytics = asyncHandler(async (req, res) => {
           user.profileViews = (user.profileViews || 0) + 1;
         } else if (action === "contact") {
           user.contactClicks = (user.contactClicks || 0) + 1;
+        } else if (action === "whatsapp_click") {
+          user.whatsappClicks = (user.whatsappClicks || 0) + 1;
+        } else if (action === "call_click") {
+          user.callClicks = (user.callClicks || 0) + 1;
         }
         await user.save();
         return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
@@ -97,7 +101,61 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get detailed user reports for admin
+// @route   GET /api/analytics/admin/user-reports
+// @access  Private/Admin
+const getUserAnalyticsReport = asyncHandler(async (req, res) => {
+  // Find all professionals, sellers, contractors, architects
+  const users = await User.find({
+    role: { $in: ["professional", "seller", "Contractor", "Architect"] }
+  }).select("name email role companyName profileViews contactClicks whatsappClicks callClicks");
+
+  // We need to find project views per user.
+  // This can be heavy, so we fetch aggregations.
+  const productViews = await Product.aggregate([
+    { $group: { _id: "$user", totalViews: { $sum: "$views" } } }
+  ]);
+  
+  const planViews = await ProfessionalPlan.aggregate([
+    { $group: { _id: "$user", totalViews: { $sum: "$views" } } }
+  ]);
+
+  const sellerProductViews = await SellerProduct.aggregate([
+    { $group: { _id: "$seller", totalViews: { $sum: "$views" } } }
+  ]);
+
+  const statsMap = {};
+  
+  productViews.forEach(p => {
+    if (p._id) statsMap[p._id.toString()] = (statsMap[p._id.toString()] || 0) + p.totalViews;
+  });
+  
+  planViews.forEach(p => {
+    if (p._id) statsMap[p._id.toString()] = (statsMap[p._id.toString()] || 0) + p.totalViews;
+  });
+  
+  sellerProductViews.forEach(p => {
+    if (p._id) statsMap[p._id.toString()] = (statsMap[p._id.toString()] || 0) + p.totalViews;
+  });
+
+  const report = users.map(u => ({
+    _id: u._id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    companyName: u.companyName,
+    profileViews: u.profileViews || 0,
+    contactClicks: u.contactClicks || 0,
+    whatsappClicks: u.whatsappClicks || 0,
+    callClicks: u.callClicks || 0,
+    projectViews: statsMap[u._id.toString()] || 0
+  }));
+
+  res.json(report);
+});
+
 module.exports = {
   trackAnalytics,
-  getAdminAnalytics
+  getAdminAnalytics,
+  getUserAnalyticsReport
 };
