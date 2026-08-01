@@ -62,6 +62,9 @@ const professionalPlanSchema = mongoose.Schema(
     galleryImages: [{ type: String }],
     planFile: { type: [String], required: true },
     headerImage: { type: String },
+    // --- Analytics Tracking Fields ---
+    views: { type: Number, default: 0 },
+
     seo: {
       title: { type: String, trim: true, default: "" },
       description: { type: String, trim: true, default: "" },

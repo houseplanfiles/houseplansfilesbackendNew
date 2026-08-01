@@ -130,6 +130,10 @@ const userSchema = mongoose.Schema(
     seoTitle: { type: String, default: "" },
     seoDescription: { type: String, default: "" },
     seoKeywords: { type: String, default: "" },
+
+    // --- Analytics Tracking Fields ---
+    profileViews: { type: Number, default: 0 },
+    contactClicks: { type: Number, default: 0 },
   },
   {
     timestamps: true,

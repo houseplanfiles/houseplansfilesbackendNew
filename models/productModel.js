@@ -65,6 +65,9 @@ const productSchema = mongoose.Schema(
     galleryImages: [{ type: String }],
     planFile: { type: [String] },
     headerImage: { type: String },
+
+    // --- Analytics Tracking Fields ---
+    views: { type: Number, default: 0 },
     seo: {
       title: { type: String, trim: true, default: "" },
       description: { type: String, trim: true, default: "" },
