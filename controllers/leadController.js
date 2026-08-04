@@ -243,7 +243,6 @@ const getAdminAllLeads = asyncHandler(async (req, res) => {
     city: "India",
     budget: "As per discussion",
     requirements: inq.message,
-    price: 0,
     clientName: inq.name,
     clientPhone: inq.phone,
     clientEmail: inq.email,
@@ -324,6 +323,18 @@ const verifyLeadPayment = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get leads purchased by the currently logged in user
+// @route   GET /api/leads/my-unlocked
+// @access  Private
+const getMyUnlockedLeads = asyncHandler(async (req, res) => {
+  const leads = await Lead.find({ buyer: req.user._id }).sort({ createdAt: -1 });
+  
+  // They are the buyer, so reveal contacts
+  const revealedLeads = leads.map(lead => revealLead({ ...lead.toObject() }));
+  
+  res.json(revealedLeads);
+});
+
 module.exports = {
   getLeads,
   getLeadById,
@@ -333,4 +344,5 @@ module.exports = {
   deleteLead,
   createLeadRazorpayOrder,
   verifyLeadPayment,
+  getMyUnlockedLeads,
 };
