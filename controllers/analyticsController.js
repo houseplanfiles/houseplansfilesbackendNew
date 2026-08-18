@@ -108,7 +108,7 @@ const getUserAnalyticsReport = asyncHandler(async (req, res) => {
   // Find all professionals, sellers, contractors, architects
   const users = await User.find({
     role: { $in: ["professional", "seller", "Contractor", "Architect"] }
-  }).select("name email role companyName profileViews contactClicks whatsappClicks callClicks");
+  }).select("name email role companyName businessName profileViews contactClicks whatsappClicks callClicks");
 
   // We need to find project views per user.
   // This can be heavy, so we fetch aggregations.
@@ -140,7 +140,7 @@ const getUserAnalyticsReport = asyncHandler(async (req, res) => {
 
   const report = users.map(u => ({
     _id: u._id,
-    name: u.name,
+    name: u.name || u.businessName || u.companyName || "Unknown",
     email: u.email,
     role: u.role,
     companyName: u.companyName,
