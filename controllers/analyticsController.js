@@ -20,46 +20,28 @@ const trackAnalytics = asyncHandler(async (req, res) => {
 
   try {
     if (type === "user") {
-      const user = await User.findById(id);
-      if (user) {
-        if (action === "view") {
-          user.profileViews = (user.profileViews || 0) + 1;
-        } else if (action === "contact") {
-          user.contactClicks = (user.contactClicks || 0) + 1;
-        } else if (action === "whatsapp_click") {
-          user.whatsappClicks = (user.whatsappClicks || 0) + 1;
-        } else if (action === "call_click") {
-          user.callClicks = (user.callClicks || 0) + 1;
-        }
-        await user.save();
-        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+      const field = action === "view" ? "profileViews" :
+                    action === "contact" ? "contactClicks" :
+                    action === "whatsapp_click" ? "whatsappClicks" :
+                    action === "call_click" ? "callClicks" : null;
+      if (field) {
+        const user = await User.findByIdAndUpdate(id, { $inc: { [field]: 1 } });
+        if (user) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "product") {
-      const product = await Product.findById(id);
-      if (product) {
-        if (action === "view") {
-          product.views = (product.views || 0) + 1;
-          await product.save();
-        }
-        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+      if (action === "view") {
+        const product = await Product.findByIdAndUpdate(id, { $inc: { views: 1 } });
+        if (product) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "plan") {
-      const plan = await ProfessionalPlan.findById(id);
-      if (plan) {
-        if (action === "view") {
-          plan.views = (plan.views || 0) + 1;
-          await plan.save();
-        }
-        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+      if (action === "view") {
+        const plan = await ProfessionalPlan.findByIdAndUpdate(id, { $inc: { views: 1 } });
+        if (plan) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "sellerProduct") {
-      const sellerProduct = await SellerProduct.findById(id);
-      if (sellerProduct) {
-        if (action === "view") {
-          sellerProduct.views = (sellerProduct.views || 0) + 1;
-          await sellerProduct.save();
-        }
-        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+      if (action === "view") {
+        const sellerProduct = await SellerProduct.findByIdAndUpdate(id, { $inc: { views: 1 } });
+        if (sellerProduct) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     }
 
