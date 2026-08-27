@@ -76,15 +76,28 @@ const validateRoleFields = (role, body) => {
         profileStoreManagement: body.profileStoreManagement || "None",
       };
     case "Contractor":
-      if (!name || !address || !city || !experience || !profession)
+      if (!name || !address || (!city && !body.selectedCities) || !experience || !profession)
         throw new Error(
           "Full Name, Address, City, Experience, and Profession are required"
         );
+      
+      let parsedStates = [];
+      let parsedCities = [];
+      try {
+        parsedStates = body.selectedStates ? JSON.parse(body.selectedStates) : [];
+      } catch(e) { parsedStates = []; }
+      try {
+        parsedCities = body.selectedCities ? JSON.parse(body.selectedCities) : [];
+      } catch(e) { parsedCities = []; }
+
       return {
         name,
         companyName: companyName || "",
         address,
-        city,
+        city: city || "",
+        selectedStates: parsedStates,
+        selectedCities: parsedCities,
+        registrationAmount: body.registrationAmount ? Number(body.registrationAmount) : 0,
         experience,
         profession,
         gstNumber,
