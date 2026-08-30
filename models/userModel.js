@@ -48,7 +48,7 @@ const userSchema = mongoose.Schema(
     // --- Subscription & Payment Fields ---
     selectedPlan: { 
       type: String, 
-      enum: ["Basic", "Standard", "Premium", "Premium+"], 
+      enum: ["Basic", "Standard", "Premium", "Premium+", "Industrial_and_Infra_Services", "Shop_Per_City", "Manufacturer_Pan_India"], 
       default: null 
     },
     profileCreation: { type: Boolean, default: false },
