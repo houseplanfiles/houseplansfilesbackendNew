@@ -367,8 +367,8 @@ const updateUser = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to update this user's profile.");
   }
 
-  user.email = req.body.email || user.email;
-  user.phone = req.body.phone || user.phone;
+  if (req.body.email !== undefined) user.email = req.body.email;
+  if (req.body.phone !== undefined) user.phone = req.body.phone;
 
   if (req.body.password) {
     if (req.body.password.length < 6) {
