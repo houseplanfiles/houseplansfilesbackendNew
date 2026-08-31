@@ -54,7 +54,7 @@ const userSchema = mongoose.Schema(
     profileCreation: { type: Boolean, default: false },
     profileStoreManagement: { 
       type: String, 
-      enum: ["None", "6_Month", "1_Year"], 
+      enum: ["None", "3_Month", "6_Month", "1_Year"], 
       default: "None" 
     },
     paymentStatus: { 
