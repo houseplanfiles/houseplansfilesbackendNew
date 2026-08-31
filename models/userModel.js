@@ -147,6 +147,10 @@ const userSchema = mongoose.Schema(
       linkedin: { type: String, default: "" },
       youtube: { type: String, default: "" },
       twitter: { type: String, default: "" },
+      whatsapp: { type: String, default: "" },
+      pinterest: { type: String, default: "" },
+      telegram: { type: String, default: "" },
+      threads: { type: String, default: "" },
     },
   },
   {
