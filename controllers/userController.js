@@ -170,6 +170,8 @@ const registerUser = asyncHandler(async (req, res) => {
       isApproved: user.isApproved,
       status: user.status,
       profileViews: user.profileViews,
+      whatsappClicks: user.whatsappClicks,
+      callClicks: user.callClicks,
       contactClicks: user.contactClicks,
       token: generateToken(user._id),
     });
@@ -261,6 +263,8 @@ const loginUser = asyncHandler(async (req, res) => {
       skills: user.skills,
       charges: user.charges,
       profileViews: user.profileViews,
+      whatsappClicks: user.whatsappClicks,
+      callClicks: user.callClicks,
       contactClicks: user.contactClicks,
       token: generateToken(user._id),
     });
@@ -446,6 +450,19 @@ const updateUser = asyncHandler(async (req, res) => {
     }
   }
 
+  // Handle social links
+  if (req.body.socialLinks) {
+    try {
+      const parsedSocialLinks = typeof req.body.socialLinks === "string"
+        ? JSON.parse(req.body.socialLinks)
+        : req.body.socialLinks;
+      user.socialLinks = parsedSocialLinks;
+    } catch (e) {
+      console.error("Error parsing socialLinks:", e);
+      user.socialLinks = req.body.socialLinks;
+    }
+  }
+
   const userRole = user.role.toLowerCase();
   switch (userRole) {
     case "user":
@@ -598,9 +615,14 @@ const updateUser = asyncHandler(async (req, res) => {
     coverPhotoUrl: updatedUser.coverPhotoUrl,
     packages: updatedUser.packages,
     workSamples: updatedUser.workSamples,
+    socialLinks: updatedUser.socialLinks,
     qualification: updatedUser.qualification,
     skills: updatedUser.skills,
     charges: updatedUser.charges,
+    profileViews: updatedUser.profileViews,
+    whatsappClicks: updatedUser.whatsappClicks,
+    callClicks: updatedUser.callClicks,
+    contactClicks: updatedUser.contactClicks,
     token: generateToken(updatedUser._id),
   });
 });

@@ -31,6 +31,7 @@ const packageSchema = new mongoose.Schema(
         "premium",
         "marketplace",
         "city_partner",
+        "construction",
       ],
     },
     features: {
