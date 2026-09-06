@@ -59,7 +59,21 @@ const trackAnalytics = asyncHandler(async (req, res) => {
 const getAdminAnalytics = asyncHandler(async (req, res) => {
   // Aggregate total profile views and product views
   const totalProfileViews = await User.aggregate([
-    { $group: { _id: null, totalViews: { $sum: "$profileViews" }, totalContactClicks: { $sum: "$contactClicks" } } }
+    { 
+      $group: { 
+        _id: null, 
+        totalViews: { $sum: "$profileViews" }, 
+        totalContactClicks: { 
+          $sum: { 
+            $add: [
+              { $ifNull: ["$contactClicks", 0] }, 
+              { $ifNull: ["$whatsappClicks", 0] }, 
+              { $ifNull: ["$callClicks", 0] }
+            ] 
+          } 
+        } 
+      } 
+    }
   ]);
 
   const totalProductViews = await Product.aggregate([
