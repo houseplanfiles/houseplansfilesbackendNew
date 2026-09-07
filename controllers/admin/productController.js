@@ -121,6 +121,7 @@ const getProducts = asyncHandler(async (req, res) => {
       { city: searchRegex },
       { productNo: searchRegex },
       { SKU: searchRegex },
+      { plotSize: searchRegex },
     ];
   }
   if (country) otherFilters.country = country;
