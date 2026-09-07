@@ -18,6 +18,8 @@ const trackAnalytics = asyncHandler(async (req, res) => {
   // type can be 'user', 'product', 'plan', 'sellerProduct'
   // action can be 'view', 'contact'
 
+  const cleanId = typeof id === "string" ? id.trim() : id;
+
   try {
     if (type === "user") {
       const field = action === "view" ? "profileViews" :
@@ -25,22 +27,22 @@ const trackAnalytics = asyncHandler(async (req, res) => {
                     action === "whatsapp_click" ? "whatsappClicks" :
                     action === "call_click" ? "callClicks" : null;
       if (field) {
-        const user = await User.findByIdAndUpdate(id, { $inc: { [field]: 1 } });
+        const user = await User.findByIdAndUpdate(cleanId, { $inc: { [field]: 1 } }, { new: true });
         if (user) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "product") {
       if (action === "view") {
-        const product = await Product.findByIdAndUpdate(id, { $inc: { views: 1 } });
+        const product = await Product.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
         if (product) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "plan") {
       if (action === "view") {
-        const plan = await ProfessionalPlan.findByIdAndUpdate(id, { $inc: { views: 1 } });
+        const plan = await ProfessionalPlan.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
         if (plan) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "sellerProduct") {
       if (action === "view") {
-        const sellerProduct = await SellerProduct.findByIdAndUpdate(id, { $inc: { views: 1 } });
+        const sellerProduct = await SellerProduct.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
         if (sellerProduct) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     }
@@ -62,7 +64,7 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
     { 
       $group: { 
         _id: null, 
-        totalViews: { $sum: "$profileViews" }, 
+        totalViews: { $sum: { $ifNull: ["$profileViews", 0] } }, 
         totalContactClicks: { 
           $sum: { 
             $add: [
@@ -77,15 +79,15 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
   ]);
 
   const totalProductViews = await Product.aggregate([
-    { $group: { _id: null, totalViews: { $sum: "$views" } } }
+    { $group: { _id: null, totalViews: { $sum: { $ifNull: ["$views", 0] } } } }
   ]);
 
   const totalPlanViews = await ProfessionalPlan.aggregate([
-    { $group: { _id: null, totalViews: { $sum: "$views" } } }
+    { $group: { _id: null, totalViews: { $sum: { $ifNull: ["$views", 0] } } } }
   ]);
 
   const totalSellerProductViews = await SellerProduct.aggregate([
-    { $group: { _id: null, totalViews: { $sum: "$views" } } }
+    { $group: { _id: null, totalViews: { $sum: { $ifNull: ["$views", 0] } } } }
   ]);
 
   res.json({
@@ -103,7 +105,7 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
   const getUserAnalyticsReport = asyncHandler(async (req, res) => {
     // Find all professionals, sellers, contractors, architects
     const users = await User.find({
-      role: { $in: ["professional", "seller", "Contractor", "Architect"] }
+      role: { $in: ["professional", "seller", "Contractor", "contractor", "Architect", "architect", "Professional", "Seller"] }
     }).select("name email role companyName businessName profileViews contactClicks whatsappClicks callClicks phone");
 
   // We need to find project views per user.

@@ -343,12 +343,18 @@ const getUserById = asyncHandler(async (req, res) => {
     throw new Error("Invalid user ID format");
   }
   const user = await User.findById(req.params.id).select("-password");
-  if (user) {
-    res.json(user);
-  } else {
+  if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
+
+  // Allow admin or the user themselves
+  if (req.user && req.user.role !== "admin" && user._id.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Not authorized to view this profile");
+  }
+
+  res.json(user);
 });
 
 const updateUser = asyncHandler(async (req, res) => {

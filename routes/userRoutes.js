@@ -63,7 +63,7 @@ router.route("/stats").get(protect, admin, getUserStats);
 
 router
   .route("/:id")
-  .get(protect, admin, getUserById)
+  .get(protect, getUserById)
   .put(protect, handleUserUploads, updateUser)
   .delete(protect, admin, deleteUser);
 
