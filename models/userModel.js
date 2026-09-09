@@ -24,6 +24,8 @@ const userSchema = mongoose.Schema(
     businessCertificationUrl: { type: String },
     shopImageUrl: { type: String },
     city: { type: String },
+    state: { type: String },
+    isPanIndia: { type: Boolean, default: false },
     selectedStates: [{ type: String }],
     selectedCities: [{ type: String }],
     registrationAmount: { type: Number, default: 0 },
@@ -48,7 +50,6 @@ const userSchema = mongoose.Schema(
     // --- Subscription & Payment Fields ---
     selectedPlan: { 
       type: String, 
-      enum: ["Basic", "Standard", "Premium", "Premium+", "Industrial_and_Infra_Services", "Industrial_State", "Industrial_Pan_India", "Arch_Contractor_State", "Arch_Contractor_Pan_India", "Shop_Per_City", "Manufacturer_Pan_India"], 
       default: null 
     },
     profileCreation: { type: Boolean, default: false },

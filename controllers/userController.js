@@ -39,6 +39,9 @@ const validateRoleFields = (role, body) => {
         name,
         profession,
         city,
+        state: body.state || "",
+        isPanIndia: body.isPanIndia === "true" || body.isPanIndia === true || false,
+        pincode: body.pincode || "",
         experience,
         companyName: companyName || "",
         address: address || "",
@@ -62,6 +65,8 @@ const validateRoleFields = (role, body) => {
         businessName,
         address,
         city,
+        state: body.state || "",
+        isPanIndia: body.isPanIndia === "true" || body.isPanIndia === true || false,
         materialType: body.materialType || "",
         category: body.category || "",
         gstNumber,
@@ -95,6 +100,9 @@ const validateRoleFields = (role, body) => {
         companyName: companyName || "",
         address,
         city: city || "",
+        state: body.state || "",
+        isPanIndia: body.isPanIndia === "true" || body.isPanIndia === true || false,
+        pincode: body.pincode || "",
         selectedStates: parsedStates,
         selectedCities: parsedCities,
         registrationAmount: body.registrationAmount ? Number(body.registrationAmount) : 0,
@@ -283,6 +291,9 @@ const getAllUsers = async (req, res) => {
       role,
       status,
       city,
+      state,
+      isPanIndia,
+      pincode,
       contractorType
     } = req.query;
 
@@ -306,8 +317,25 @@ const getAllUsers = async (req, res) => {
     if (status && status !== "all") {
       query.status = status;
     }
+    if (isPanIndia === "true" || isPanIndia === true) {
+      query.isPanIndia = true;
+    }
     if (city) {
-      query.city = { $regex: city, $options: "i" };
+      query.$or = [
+        { city: { $regex: city, $options: "i" } },
+        { selectedCities: { $regex: city, $options: "i" } },
+        { isPanIndia: true }
+      ];
+    }
+    if (state) {
+      query.$or = [
+        { state: { $regex: state, $options: "i" } },
+        { selectedStates: { $regex: state, $options: "i" } },
+        { isPanIndia: true }
+      ];
+    }
+    if (pincode) {
+      query.pincode = { $regex: pincode, $options: "i" };
     }
     if (contractorType && contractorType !== "all") {
       query.contractorType = contractorType;
@@ -575,6 +603,14 @@ const updateUser = asyncHandler(async (req, res) => {
     }
     if (req.body.selectedPlan !== undefined) {
       user.selectedPlan = req.body.selectedPlan;
+      if (req.body.selectedPlan === "Basic" || req.body.selectedPlan === null) {
+        user.contractorType = "Normal";
+      }
+    }
+    if (req.body.contractorType === "Normal") {
+      if (!user.selectedPlan || user.selectedPlan !== "None") {
+        user.selectedPlan = "Basic";
+      }
     }
     if (req.body.profileCreation !== undefined) {
       user.profileCreation = req.body.profileCreation === "true" || req.body.profileCreation === true;
@@ -734,7 +770,7 @@ const getAllContractorProjects = asyncHandler(async (req, res) => {
 
 const getContractorPublicProfile = asyncHandler(async (req, res) => {
   const contractor = await User.findById(req.params.id).select(
-    "name companyName photoUrl shopImageUrl city address experience profession contractorType coverPhotoUrl packages workSamples portfolioUrl role"
+    "name companyName photoUrl shopImageUrl city state isPanIndia pincode phone address experience profession contractorType selectedPlan coverPhotoUrl packages workSamples portfolioUrl role charges skills qualification"
   );
 
   if (contractor && contractor.role && ["contractor", "architect", "professional"].includes(contractor.role.toLowerCase())) {
@@ -748,7 +784,7 @@ const getContractorPublicProfile = asyncHandler(async (req, res) => {
 
 const getSellerPublicProfile = asyncHandler(async (req, res) => {
   const seller = await User.findById(req.params.sellerId).select(
-    "name businessName shopImageUrl photoUrl city address materialType role businessType"
+    "name businessName shopImageUrl photoUrl city state isPanIndia pincode phone address materialType role businessType contractorType selectedPlan socialLinks"
   );
 
   if (seller && seller.role === "seller") {

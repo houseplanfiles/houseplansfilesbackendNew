@@ -69,14 +69,19 @@ const updateOrderAfterPayment = async (order, paymentDetails = {}) => {
           } else if (name.includes("standard")) {
             user.selectedPlan = "Standard";
             user.contractorType = "Verified";
-          } else if (name.includes("premium+")) {
-            user.selectedPlan = "Premium+";
+          } else {
             user.contractorType = "Premium";
-            user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 12 months
-          } else if (name.includes("premium")) {
-            user.selectedPlan = "Premium";
-            user.contractorType = "Premium";
-            user.premiumExpiresAt = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000); // 6 months
+            user.selectedPlan = item.name;
+            if (name.includes("3 month") || name.includes("3m")) {
+              user.premiumExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 3 months
+            } else if (name.includes("6 month") || name.includes("6m")) {
+              user.premiumExpiresAt = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000); // 6 months
+            } else {
+              user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+            }
+            if (name.includes("pan india")) {
+              user.isPanIndia = true;
+            }
           }
 
           if (name.includes("profile creation")) {
