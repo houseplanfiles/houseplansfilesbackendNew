@@ -33,16 +33,25 @@ const trackAnalytics = asyncHandler(async (req, res) => {
     } else if (type === "product") {
       if (action === "view") {
         const product = await Product.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
+        if (product && product.user) {
+          await User.findByIdAndUpdate(product.user, { $inc: { profileViews: 1 } });
+        }
         if (product) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "plan") {
       if (action === "view") {
         const plan = await ProfessionalPlan.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
+        if (plan && plan.user) {
+          await User.findByIdAndUpdate(plan.user, { $inc: { profileViews: 1 } });
+        }
         if (plan) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "sellerProduct") {
       if (action === "view") {
         const sellerProduct = await SellerProduct.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
+        if (sellerProduct && sellerProduct.seller) {
+          await User.findByIdAndUpdate(sellerProduct.seller, { $inc: { profileViews: 1 } });
+        }
         if (sellerProduct) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     }
