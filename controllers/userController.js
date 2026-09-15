@@ -299,13 +299,17 @@ const getAllUsers = async (req, res) => {
 
     const query = {};
 
+    const andConditions = [];
+
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { businessName: { $regex: search, $options: "i" } },
-        { companyName: { $regex: search, $options: "i" } },
-      ];
+      andConditions.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { businessName: { $regex: search, $options: "i" } },
+          { companyName: { $regex: search, $options: "i" } },
+        ]
+      });
     }
     if (role && role !== "all") {
       if (role.includes(",")) {
@@ -321,18 +325,26 @@ const getAllUsers = async (req, res) => {
       query.isPanIndia = true;
     }
     if (city) {
-      query.$or = [
-        { city: { $regex: city, $options: "i" } },
-        { selectedCities: { $regex: city, $options: "i" } },
-        { isPanIndia: true }
-      ];
+      andConditions.push({
+        $or: [
+          { city: { $regex: city, $options: "i" } },
+          { selectedCities: { $regex: city, $options: "i" } },
+          { isPanIndia: true }
+        ]
+      });
     }
     if (state) {
-      query.$or = [
-        { state: { $regex: state, $options: "i" } },
-        { selectedStates: { $regex: state, $options: "i" } },
-        { isPanIndia: true }
-      ];
+      andConditions.push({
+        $or: [
+          { state: { $regex: state, $options: "i" } },
+          { selectedStates: { $regex: state, $options: "i" } },
+          { isPanIndia: true }
+        ]
+      });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
     if (pincode) {
       query.pincode = { $regex: pincode, $options: "i" };
@@ -407,6 +419,7 @@ const updateUser = asyncHandler(async (req, res) => {
 
   if (req.body.email !== undefined) user.email = req.body.email;
   if (req.body.phone !== undefined) user.phone = req.body.phone;
+  if (req.body.state !== undefined) user.state = req.body.state;
 
   if (req.body.password) {
     if (req.body.password.length < 6) {
