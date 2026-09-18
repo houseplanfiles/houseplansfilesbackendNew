@@ -42,6 +42,10 @@ const packageSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    image: {
+      type: String,
+      default: "",
+    },
     note: {
       type: String,
       default: "",
