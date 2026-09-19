@@ -6,15 +6,16 @@ const {
   updatePackage,
   deletePackage,
 } = require("../controllers/packageController.js");
+const upload = require("../middleware/uploadMiddleware.js");
 
 const router = express.Router();
 
-router.route("/").post(createPackage).get(getPackages);
+router.route("/").post(upload.single("image"), createPackage).get(getPackages);
 
 router
   .route("/:id")
   .get(getPackageById)
-  .put(updatePackage)
+  .put(upload.single("image"), updatePackage)
   .delete(deletePackage);
 
 module.exports = router;

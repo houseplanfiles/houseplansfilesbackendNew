@@ -165,12 +165,25 @@ const productSchema = mongoose.Schema(
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
     reviews: [reviewSchema],
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    images: [{ type: String }],
     status: {
       type: String,
-      enum: ["Published", "Pending Review", "Draft"],
-      default: "Published",
+      enum: ["Draft", "Pending Approval", "Approved", "Rejected"],
+      default: "Pending Approval",
     },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    approvedAt: { type: Date },
+    views: { type: Number, default: 0 },
+    
+    // --- Daily Timeseries Analytics ---
+    dailyAnalytics: [
+      {
+        date: { type: String, required: true }, // Format: YYYY-MM-DD
+        views: { type: Number, default: 0 },
+      }
+    ],
+
+    // SEO fields
   },
   {
     timestamps: true,

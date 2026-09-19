@@ -2,7 +2,12 @@ const Package = require("../models/packageModel.js");
 
 const createPackage = async (req, res) => {
   try {
-    const newPackage = new Package(req.body);
+    const packageData = { ...req.body };
+    if (req.file && req.file.location) {
+      packageData.image = req.file.location;
+    }
+
+    const newPackage = new Package(packageData);
     const savedPackage = await newPackage.save();
     res.status(201).json({
       success: true,
@@ -62,9 +67,14 @@ const getPackageById = async (req, res) => {
 
 const updatePackage = async (req, res) => {
   try {
+    const packageData = { ...req.body };
+    if (req.file && req.file.location) {
+      packageData.image = req.file.location;
+    }
+
     const updatedPackage = await Package.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      packageData,
       { new: true, runValidators: true }
     );
     if (!updatedPackage) {

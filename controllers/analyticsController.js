@@ -20,29 +20,63 @@ const trackAnalytics = asyncHandler(async (req, res) => {
 
   const cleanId = typeof id === "string" ? id.trim() : id;
 
-  try {
+const getTodayDateString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const updateDailyUserAnalytics = async (userId, field) => {
+  const today = getTodayDateString();
+  const user = await User.findById(userId);
+  if (!user) return;
+  user[field] = (user[field] || 0) + 1;
+  const daily = user.dailyAnalytics.find(d => d.date === today);
+  if (daily) {
+    daily[field] = (daily[field] || 0) + 1;
+  } else {
+    user.dailyAnalytics.push({ date: today, [field]: 1 });
+  }
+  await user.save();
+};
+
+const updateDailyProductAnalytics = async (productId) => {
+  const today = getTodayDateString();
+  const product = await Product.findById(productId);
+  if (!product) return;
+  product.views = (product.views || 0) + 1;
+  const daily = product.dailyAnalytics.find(d => d.date === today);
+  if (daily) {
+    daily.views = (daily.views || 0) + 1;
+  } else {
+    product.dailyAnalytics.push({ date: today, views: 1 });
+  }
+  await product.save();
+  return product.user; // Return owner for cascading updates
+};
+
+try {
     if (type === "user") {
       const field = action === "view" ? "profileViews" :
                     action === "contact" ? "contactClicks" :
                     action === "whatsapp_click" ? "whatsappClicks" :
                     action === "call_click" ? "callClicks" : null;
       if (field) {
-        const user = await User.findByIdAndUpdate(cleanId, { $inc: { [field]: 1 } }, { new: true });
-        if (user) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+        await updateDailyUserAnalytics(cleanId, field);
+        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "product") {
       if (action === "view") {
-        const product = await Product.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
-        if (product && product.user) {
-          await User.findByIdAndUpdate(product.user, { $inc: { profileViews: 1 } });
+        const ownerId = await updateDailyProductAnalytics(cleanId);
+        if (ownerId) {
+          await updateDailyUserAnalytics(ownerId, "profileViews");
         }
-        if (product) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     } else if (type === "plan") {
       if (action === "view") {
         const plan = await ProfessionalPlan.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
         if (plan && plan.user) {
-          await User.findByIdAndUpdate(plan.user, { $inc: { profileViews: 1 } });
+          await updateDailyUserAnalytics(plan.user, "profileViews");
         }
         if (plan) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
@@ -50,7 +84,7 @@ const trackAnalytics = asyncHandler(async (req, res) => {
       if (action === "view") {
         const sellerProduct = await SellerProduct.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
         if (sellerProduct && sellerProduct.seller) {
-          await User.findByIdAndUpdate(sellerProduct.seller, { $inc: { profileViews: 1 } });
+          await updateDailyUserAnalytics(sellerProduct.seller, "profileViews");
         }
         if (sellerProduct) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
