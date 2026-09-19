@@ -141,6 +141,16 @@ const userSchema = mongoose.Schema(
     whatsappClicks: { type: Number, default: 0 },
     callClicks: { type: Number, default: 0 },
     
+    // --- Daily Timeseries Analytics (For Dashboards) ---
+    dailyAnalytics: [
+      {
+        date: { type: String, required: true }, // Format: YYYY-MM-DD
+        profileViews: { type: Number, default: 0 },
+        whatsappClicks: { type: Number, default: 0 },
+        callClicks: { type: Number, default: 0 }
+      }
+    ],
+
     // --- Social Media Links ---
     socialLinks: {
       facebook: { type: String, default: "" },
