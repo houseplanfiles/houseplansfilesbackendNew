@@ -22,12 +22,44 @@ const getSellerDashboardData = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(5);
 
-  const [totalProducts, totalInquiries, uniqueBuyers, recentInquiries] =
+  // Group Inquiries by Date for the last 15 days
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+  const dailyStatsPromise = SellerInquiry.aggregate([
+    {
+      $match: {
+        seller: sellerId,
+        createdAt: { $gte: fifteenDaysAgo },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+        },
+        inquiries: { $sum: 1 },
+        buyersSet: { $addToSet: "$email" },
+      },
+    },
+    {
+      $project: {
+        date: "$_id",
+        inquiries: 1,
+        buyers: { $size: "$buyersSet" },
+        _id: 0,
+      },
+    },
+    { $sort: { date: 1 } },
+  ]);
+
+  const [totalProducts, totalInquiries, uniqueBuyers, recentInquiries, dailyStats] =
     await Promise.all([
       totalProductsPromise,
       totalInquiriesPromise,
       uniqueBuyersPromise,
       recentInquiriesPromise,
+      dailyStatsPromise,
     ]);
 
   res.json({
@@ -35,6 +67,7 @@ const getSellerDashboardData = asyncHandler(async (req, res) => {
     totalInquiries,
     totalBuyers: uniqueBuyers.length,
     recentInquiries,
+    dailyStats,
   });
 });
 

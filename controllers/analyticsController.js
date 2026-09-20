@@ -4,6 +4,8 @@ const Product = require("../models/productModel");
 const ProfessionalPlan = require("../models/professionalPlanModel");
 const SellerProduct = require("../models/sellerProductModel");
 
+const AnalyticsLog = require("../models/analyticsLogModel");
+
 // @desc    Track view or click/contact event
 // @route   POST /api/analytics/track
 // @access  Public
@@ -15,10 +17,8 @@ const trackAnalytics = asyncHandler(async (req, res) => {
     throw new Error("Please provide type, id, and action");
   }
 
-  // type can be 'user', 'product', 'plan', 'sellerProduct'
-  // action can be 'view', 'contact'
-
   const cleanId = typeof id === "string" ? id.trim() : id;
+  const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
 
 const getTodayDateString = () => {
   const d = new Date();
@@ -54,6 +54,44 @@ const updateDailyProductAnalytics = async (productId) => {
   return product.user; // Return owner for cascading updates
 };
 
+const updateDailySellerProductAnalytics = async (sellerProductId) => {
+  const today = getTodayDateString();
+  const product = await SellerProduct.findById(sellerProductId);
+  if (!product) return;
+  product.views = (product.views || 0) + 1;
+  const daily = product.dailyAnalytics.find(d => d.date === today);
+  if (daily) {
+    daily.views = (daily.views || 0) + 1;
+  } else {
+    product.dailyAnalytics.push({ date: today, views: 1 });
+  }
+  await product.save();
+  return product.seller;
+};
+
+// Helper for IP tracking
+const checkAndLogIp = async (targetId, targetModel, actionName) => {
+  if (ipAddress === 'unknown') return true; // Can't track, allow
+  
+  const existing = await AnalyticsLog.findOne({
+    targetId,
+    targetModel,
+    action: actionName,
+    ipAddress
+  });
+  
+  if (existing) return false; // Already tracked
+  
+  await AnalyticsLog.create({
+    targetId,
+    targetModel,
+    action: actionName,
+    ipAddress
+  });
+  
+  return true; // Newly tracked
+};
+
 try {
     if (type === "user") {
       const field = action === "view" ? "profileViews" :
@@ -61,6 +99,13 @@ try {
                     action === "whatsapp_click" ? "whatsappClicks" :
                     action === "call_click" ? "callClicks" : null;
       if (field) {
+        // Enforce IP tracking for WhatsApp and Call clicks
+        if (action === "whatsapp_click" || action === "call_click") {
+          const shouldCount = await checkAndLogIp(cleanId, "User", action);
+          if (!shouldCount) {
+             return res.status(200).json({ success: true, message: "Analytics already tracked for this IP" });
+          }
+        }
         await updateDailyUserAnalytics(cleanId, field);
         return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
@@ -82,11 +127,11 @@ try {
       }
     } else if (type === "sellerProduct") {
       if (action === "view") {
-        const sellerProduct = await SellerProduct.findByIdAndUpdate(cleanId, { $inc: { views: 1 } }, { new: true });
-        if (sellerProduct && sellerProduct.seller) {
-          await updateDailyUserAnalytics(sellerProduct.seller, "profileViews");
+        const sellerId = await updateDailySellerProductAnalytics(cleanId);
+        if (sellerId) {
+          await updateDailyUserAnalytics(sellerId, "profileViews");
         }
-        if (sellerProduct) return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
+        return res.status(200).json({ success: true, message: "Analytics tracked successfully" });
       }
     }
 
