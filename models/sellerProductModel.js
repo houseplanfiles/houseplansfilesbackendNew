@@ -77,6 +77,12 @@ const sellerProductSchema = mongoose.Schema(
     // --- END NEW FIELDS ---
     // --- Analytics Tracking Fields ---
     views: { type: Number, default: 0 },
+    dailyAnalytics: [
+      {
+        date: { type: String, required: true }, // Format: YYYY-MM-DD
+        views: { type: Number, default: 0 },
+      }
+    ],
 
     isApproved: {
       type: Boolean,

@@ -10,8 +10,12 @@ const {
   createLeadRazorpayOrder,
   verifyLeadPayment,
   getMyUnlockedLeads,
+  submitPublicLead,
 } = require("../controllers/leadController");
 const { protect, admin, softProtect } = require("../middleware/authMiddleware");
+
+// Public route for form submissions
+router.route("/public").post(submitPublicLead);
 
 // Contractor/User only: get purchased leads
 router.route("/my-unlocked").get(protect, getMyUnlockedLeads);

@@ -82,6 +82,43 @@ const getLeadById = asyncHandler(async (req, res) => {
   res.json(lead);
 });
 
+const submitPublicLead = asyncHandler(async (req, res) => {
+  const {
+    name,
+    phone,
+    city,
+    category,
+    requirements,
+    budget
+  } = req.body;
+
+  if (!name || !phone || !category || !city || !requirements) {
+    res.status(400);
+    throw new Error("Please provide all required fields");
+  }
+
+  // Create lead with default settings for a public submission
+  const lead = await Lead.create({
+    title: `${category} Requirement in ${city}`,
+    category,
+    city,
+    budget: budget || "Not Specified",
+    requirements,
+    price: 99, // default price for new leads
+    clientName: name,
+    clientPhone: phone,
+    clientEmail: "", // optional
+    status: "Available"
+  });
+
+  if (lead) {
+    res.status(201).json({ success: true, lead });
+  } else {
+    res.status(400);
+    throw new Error("Invalid lead data");
+  }
+});
+
 // @desc    Create a new lead (Admin only)
 // @route   POST /api/leads
 // @access  Private/Admin
@@ -345,4 +382,5 @@ module.exports = {
   createLeadRazorpayOrder,
   verifyLeadPayment,
   getMyUnlockedLeads,
+  submitPublicLead,
 };
