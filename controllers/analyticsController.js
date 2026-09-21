@@ -195,52 +195,90 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
   // @route   GET /api/analytics/admin/user-reports
   // @access  Private/Admin
   const getUserAnalyticsReport = asyncHandler(async (req, res) => {
+    const { timeRange } = req.query; // 'today', '7d', '1m', '3m', '6m', '1y'
+
+    const getDateThreshold = (range) => {
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      if (range === 'today') return d;
+      if (range === '7d') d.setDate(d.getDate() - 7);
+      else if (range === '1m') d.setMonth(d.getMonth() - 1);
+      else if (range === '3m') d.setMonth(d.getMonth() - 3);
+      else if (range === '6m') d.setMonth(d.getMonth() - 6);
+      else if (range === '1y') d.setFullYear(d.getFullYear() - 1);
+      else return null;
+      return d;
+    };
+
+    const thresholdDate = getDateThreshold(timeRange);
+
     // Find all professionals, sellers, contractors, architects
     const users = await User.find({
       role: { $in: ["professional", "seller", "Contractor", "contractor", "Architect", "architect", "Professional", "Seller"] }
-    }).select("name email role companyName businessName profileViews contactClicks whatsappClicks callClicks phone");
+    }).select("name email role companyName businessName profileViews contactClicks whatsappClicks callClicks phone dailyAnalytics");
 
-  // We need to find project views per user.
-  // This can be heavy, so we fetch aggregations.
-  const productViews = await Product.aggregate([
-    { $group: { _id: "$user", totalViews: { $sum: "$views" } } }
-  ]);
-  
-  const planViews = await ProfessionalPlan.aggregate([
-    { $group: { _id: "$user", totalViews: { $sum: "$views" } } }
-  ]);
+  const products = await Product.find().select("user dailyAnalytics views");
+  const plans = await ProfessionalPlan.find().select("user dailyAnalytics views");
+  const sellerProducts = await SellerProduct.find().select("seller dailyAnalytics views");
 
-  const sellerProductViews = await SellerProduct.aggregate([
-    { $group: { _id: "$seller", totalViews: { $sum: "$views" } } }
-  ]);
+  const statsMap = {}; 
 
-  const statsMap = {};
-  
-  productViews.forEach(p => {
-    if (p._id) statsMap[p._id.toString()] = (statsMap[p._id.toString()] || 0) + p.totalViews;
+  const processDaily = (items, userField) => {
+    items.forEach(item => {
+      const uId = item[userField];
+      if (!uId) return;
+      const uIdStr = uId.toString();
+      if (!statsMap[uIdStr]) statsMap[uIdStr] = 0;
+
+      if (thresholdDate && item.dailyAnalytics && item.dailyAnalytics.length > 0) {
+        item.dailyAnalytics.forEach(d => {
+          if (new Date(d.date) >= thresholdDate) {
+            statsMap[uIdStr] += (d.views || 0);
+          }
+        });
+      } else if (!thresholdDate) {
+        statsMap[uIdStr] += (item.views || 0);
+      }
+    });
+  };
+
+  processDaily(products, 'user');
+  processDaily(plans, 'user');
+  processDaily(sellerProducts, 'seller');
+
+  const report = users.map(u => {
+    let profileViews = 0, contactClicks = 0, whatsappClicks = 0, callClicks = 0;
+
+    if (thresholdDate && u.dailyAnalytics && u.dailyAnalytics.length > 0) {
+      u.dailyAnalytics.forEach(d => {
+        if (new Date(d.date) >= thresholdDate) {
+          profileViews += (d.profileViews || 0);
+          contactClicks += (d.contactClicks || 0);
+          whatsappClicks += (d.whatsappClicks || 0);
+          callClicks += (d.callClicks || 0);
+        }
+      });
+    } else if (!thresholdDate) {
+      profileViews = u.profileViews || 0;
+      contactClicks = u.contactClicks || 0;
+      whatsappClicks = u.whatsappClicks || 0;
+      callClicks = u.callClicks || 0;
+    }
+
+    return {
+      _id: u._id,
+      name: u.name || u.businessName || u.companyName || "Unknown",
+      email: u.email,
+      phone: u.phone,
+      role: u.role,
+      companyName: u.companyName,
+      profileViews,
+      contactClicks,
+      whatsappClicks,
+      callClicks,
+      projectViews: statsMap[u._id.toString()] || 0
+    };
   });
-  
-  planViews.forEach(p => {
-    if (p._id) statsMap[p._id.toString()] = (statsMap[p._id.toString()] || 0) + p.totalViews;
-  });
-  
-  sellerProductViews.forEach(p => {
-    if (p._id) statsMap[p._id.toString()] = (statsMap[p._id.toString()] || 0) + p.totalViews;
-  });
-
-  const report = users.map(u => ({
-    _id: u._id,
-    name: u.name || u.businessName || u.companyName || "Unknown",
-    email: u.email,
-    phone: u.phone,
-    role: u.role,
-    companyName: u.companyName,
-    profileViews: u.profileViews || 0,
-    contactClicks: u.contactClicks || 0,
-    whatsappClicks: u.whatsappClicks || 0,
-    callClicks: u.callClicks || 0,
-    projectViews: statsMap[u._id.toString()] || 0
-  }));
 
   res.json(report);
 });
