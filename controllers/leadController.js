@@ -35,7 +35,9 @@ const getLeads = asyncHandler(async (req, res) => {
   const currentUserId = req.user ? req.user._id.toString() : null;
 
   // 1. Fetch from Lead model only
-  const adminLeads = await Lead.find({}).sort({ createdAt: -1 }).lean();
+  const adminLeads = await Lead.find({ status: { $in: ["Available", "Sold"] } })
+    .sort({ createdAt: -1 })
+    .lean();
 
   // 2. Add sourceType
   let allLeads = adminLeads.map((lead) => ({
@@ -108,7 +110,7 @@ const submitPublicLead = asyncHandler(async (req, res) => {
     clientName: name,
     clientPhone: phone,
     clientEmail: "", // optional
-    status: "Available"
+    status: "Pending" // user submitted leads must be approved by admin
   });
 
   if (lead) {

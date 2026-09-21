@@ -45,8 +45,8 @@ const leadSchema = mongoose.Schema(
     // --- Purchase/Status tracking ---
     status: {
       type: String,
-      enum: ["Available", "Sold"],
-      default: "Available",
+      enum: ["Pending", "Available", "Sold"],
+      default: "Pending",
     },
     buyer: {
       type: mongoose.Schema.Types.ObjectId,
