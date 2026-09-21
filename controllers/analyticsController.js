@@ -161,7 +161,9 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
               { $ifNull: ["$callClicks", 0] }
             ] 
           } 
-        } 
+        },
+        totalWhatsappClicks: { $sum: { $ifNull: ["$whatsappClicks", 0] } },
+        totalCallClicks: { $sum: { $ifNull: ["$callClicks", 0] } }
       } 
     }
   ]);
@@ -181,6 +183,8 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
   res.json({
     profileViews: totalProfileViews[0]?.totalViews || 0,
     contactClicks: totalProfileViews[0]?.totalContactClicks || 0,
+    whatsappClicks: totalProfileViews[0]?.totalWhatsappClicks || 0,
+    callClicks: totalProfileViews[0]?.totalCallClicks || 0,
     productViews: totalProductViews[0]?.totalViews || 0,
     planViews: totalPlanViews[0]?.totalViews || 0,
     sellerProductViews: totalSellerProductViews[0]?.totalViews || 0,
