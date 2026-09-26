@@ -12,9 +12,10 @@ const {
   getContractorPublicProfile,
   forgotPassword,
   resetPassword,
-  addProjectReview,
   updateProjectSEO,
   getAllContractorProjects,
+  getContractorBySEO,
+  getSellerBySEO,
 } = require("../controllers/userController");
 
 const upload = require("../middleware/uploadMiddleware");
@@ -50,7 +51,9 @@ router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.put("/reset-password/:token", resetPassword);
 router.get("/store/:sellerId", getSellerPublicProfile);
+router.get("/store/seo/:role/:businessName", getSellerBySEO); // NEW SEO ROUTE
 router.get("/contractor/:id", getContractorPublicProfile); // NEW PUBLIC ROUTE
+router.get("/contractor/seo/:profession/:city/:name", getContractorBySEO); // NEW SEO ROUTE
 router.post("/contractors/:id/reviews", protect, addProjectReview);
 router.put("/contractors/:id/seo", protect, admin, updateProjectSEO); // ADMIN ONLY
 router.get("/admin/contractor-projects", protect, admin, getAllContractorProjects); // NEW ADMIN PROJECT LIST

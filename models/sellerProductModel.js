@@ -90,7 +90,7 @@ const sellerProductSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Rejected"],
+      enum: ["Draft", "Pending", "Pending Approval", "Pending Review", "Approved", "Published", "Rejected"],
       default: "Approved",
     },
   },

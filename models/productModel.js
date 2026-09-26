@@ -169,7 +169,7 @@ const productSchema = mongoose.Schema(
     images: [{ type: String }],
     status: {
       type: String,
-      enum: ["Draft", "Pending Approval", "Approved", "Rejected"],
+      enum: ["Draft", "Pending Approval", "Pending Review", "Approved", "Published", "Rejected"],
       default: "Pending Approval",
     },
     approvedAt: { type: Date },
