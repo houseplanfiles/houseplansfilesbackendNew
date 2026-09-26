@@ -1020,42 +1020,8 @@ const getContractorBySEO = asyncHandler(async (req, res) => {
   // Try to find an exact or case-insensitive match
   let user = await User.findOne({
     role: { $in: ['Professional', 'professional', 'Contractor', 'contractor'] },
-    name: new RegExp('^' + name.replace(/-/g, '.*') + '
-  registerUser,
-  loginUser,
-  getAllUsers,
-  getUserById,
-  updateUser,
-  deleteUser,
-  getUserStats,
-  createUserByAdmin,
-  getSellerPublicProfile,
-  getContractorPublicProfile,
-  forgotPassword,
-  resetPassword,
-  addProjectReview,
-  updateProjectSEO,
-  getAllContractorProjects,
-};
-, 'i'),
-    city: new RegExp('^' + city.replace(/-/g, '.*') + '
-  registerUser,
-  loginUser,
-  getAllUsers,
-  getUserById,
-  updateUser,
-  deleteUser,
-  getUserStats,
-  createUserByAdmin,
-  getSellerPublicProfile,
-  getContractorPublicProfile,
-  forgotPassword,
-  resetPassword,
-  addProjectReview,
-  updateProjectSEO,
-  getAllContractorProjects,
-};
-, 'i')
+    name: new RegExp('^' + name.replace(/-/g, '.*') + '$', 'i'),
+    city: new RegExp('^' + city.replace(/-/g, '.*') + '$', 'i')
   }).select('-password');
   
   if (!user) {
@@ -1078,24 +1044,7 @@ const getSellerBySEO = asyncHandler(async (req, res) => {
   
   let user = await User.findOne({
     role: { $in: ['Seller', 'seller'] },
-    companyName: new RegExp('^' + businessName.replace(/-/g, '.*') + '
-  registerUser,
-  loginUser,
-  getAllUsers,
-  getUserById,
-  updateUser,
-  deleteUser,
-  getUserStats,
-  createUserByAdmin,
-  getSellerPublicProfile,
-  getContractorPublicProfile,
-  forgotPassword,
-  resetPassword,
-  addProjectReview,
-  updateProjectSEO,
-  getAllContractorProjects,
-};
-, 'i')
+    companyName: new RegExp('^' + businessName.replace(/-/g, '.*') + '$', 'i')
   }).select('-password');
 
   if (!user) {
