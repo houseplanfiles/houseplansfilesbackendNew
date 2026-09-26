@@ -1013,7 +1013,108 @@ const updateProjectSEO = asyncHandler(async (req, res) => {
   }
 });
 
+
+const getContractorBySEO = asyncHandler(async (req, res) => {
+  const { profession, city, name } = req.params;
+  
+  // Try to find an exact or case-insensitive match
+  let user = await User.findOne({
+    role: { $in: ['Professional', 'professional', 'Contractor', 'contractor'] },
+    name: new RegExp('^' + name.replace(/-/g, '.*') + '
+  registerUser,
+  loginUser,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getUserStats,
+  createUserByAdmin,
+  getSellerPublicProfile,
+  getContractorPublicProfile,
+  forgotPassword,
+  resetPassword,
+  addProjectReview,
+  updateProjectSEO,
+  getAllContractorProjects,
+};
+, 'i'),
+    city: new RegExp('^' + city.replace(/-/g, '.*') + '
+  registerUser,
+  loginUser,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getUserStats,
+  createUserByAdmin,
+  getSellerPublicProfile,
+  getContractorPublicProfile,
+  forgotPassword,
+  resetPassword,
+  addProjectReview,
+  updateProjectSEO,
+  getAllContractorProjects,
+};
+, 'i')
+  }).select('-password');
+  
+  if (!user) {
+    // try looser matching
+    user = await User.findOne({
+       name: new RegExp(name.replace(/-/g, '.*'), 'i')
+    }).select('-password');
+  }
+
+  if (user) {
+    res.json({ contractor: user });
+  } else {
+    res.status(404);
+    throw new Error('Contractor not found');
+  }
+});
+
+const getSellerBySEO = asyncHandler(async (req, res) => {
+  const { role, businessName } = req.params;
+  
+  let user = await User.findOne({
+    role: { $in: ['Seller', 'seller'] },
+    companyName: new RegExp('^' + businessName.replace(/-/g, '.*') + '
+  registerUser,
+  loginUser,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getUserStats,
+  createUserByAdmin,
+  getSellerPublicProfile,
+  getContractorPublicProfile,
+  forgotPassword,
+  resetPassword,
+  addProjectReview,
+  updateProjectSEO,
+  getAllContractorProjects,
+};
+, 'i')
+  }).select('-password');
+
+  if (!user) {
+    user = await User.findOne({
+      companyName: new RegExp(businessName.replace(/-/g, '.*'), 'i')
+    }).select('-password');
+  }
+
+  if (user) {
+    res.json({ seller: user });
+  } else {
+    res.status(404);
+    throw new Error('Seller not found');
+  }
+});
+
 module.exports = {
+  getContractorBySEO,
+  getSellerBySEO,
   registerUser,
   loginUser,
   getAllUsers,
