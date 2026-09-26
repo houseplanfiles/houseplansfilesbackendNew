@@ -43,25 +43,15 @@ startPremiumExpiryCron();
 
 const app = express();
 
-// ✅ CORS — explicitly allow production and preview origins
-const allowedOrigins = [
-  "https://www.houseplanfiles.com",
-  "https://houseplanfiles.com",
-  "https://houseplansfilesfrontend-new.vercel.app",
-  "http://localhost:3000",
-];
-
+// ✅ CORS — Permissive setup that reflects the incoming origin
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Not allowed by CORS"));
+    // Reflect the request origin back to allow it
+    callback(null, origin || true);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 };
 
 app.use(cors(corsOptions));
