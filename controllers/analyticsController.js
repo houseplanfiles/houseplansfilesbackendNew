@@ -125,43 +125,42 @@ try {
   }
 });
 
+const getDateBounds = (range, start, end) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  if (range === 'custom' && start && end) {
+    return { start: new Date(start + 'T00:00:00'), end: new Date(end + 'T23:59:59') };
+  }
+
+  if (range === 'today') return { start: today, end: todayEnd };
+
+  if (range === 'yesterday') {
+    const y = new Date(today);
+    y.setDate(y.getDate() - 1);
+    const yEnd = new Date(todayEnd);
+    yEnd.setDate(yEnd.getDate() - 1);
+    return { start: y, end: yEnd };
+  }
+
+  const d = new Date(today);
+  if (range === '7d') d.setDate(d.getDate() - 7);
+  else if (range === '1m') d.setMonth(d.getMonth() - 1);
+  else if (range === '3m') d.setMonth(d.getMonth() - 3);
+  else if (range === '6m') d.setMonth(d.getMonth() - 6);
+  else if (range === '1y') d.setFullYear(d.getFullYear() - 1);
+  else return null;
+
+  return { start: d, end: todayEnd };
+};
+
 // @desc    Get analytics stats for admin
 // @route   GET /api/analytics/admin
 // @access  Private/Admin
 const getAdminAnalytics = asyncHandler(async (req, res) => {
-    const { timeRange, startDate, endDate } = req.query;
-
-  const getDateBounds = (range, start, end) => {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23,59,59,999);
-
-    if (range === 'custom' && start && end) {
-      return { start: new Date(start + 'T00:00:00'), end: new Date(end + 'T23:59:59') };
-    }
-    
-    if (range === 'today') return { start: today, end: todayEnd };
-    
-    if (range === 'yesterday') {
-      const y = new Date(today);
-      y.setDate(y.getDate() - 1);
-      const yEnd = new Date(todayEnd);
-      yEnd.setDate(yEnd.getDate() - 1);
-      return { start: y, end: yEnd };
-    }
-    
-    const d = new Date(today);
-    if (range === '7d') d.setDate(d.getDate() - 7);
-    else if (range === '1m') d.setMonth(d.getMonth() - 1);
-    else if (range === '3m') d.setMonth(d.getMonth() - 3);
-    else if (range === '6m') d.setMonth(d.getMonth() - 6);
-    else if (range === '1y') d.setFullYear(d.getFullYear() - 1);
-    else return null;
-    
-    return { start: d, end: todayEnd };
-  };
-
+  const { timeRange, startDate, endDate } = req.query;
   const bounds = getDateBounds(timeRange, startDate, endDate);
 
 
@@ -254,27 +253,13 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
   // @route   GET /api/analytics/admin/user-reports
   // @access  Private/Admin
   const getUserAnalyticsReport = asyncHandler(async (req, res) => {
-    const { timeRange } = req.query; // 'today', '7d', '1m', '3m', '6m', '1y'
-
-    const getDateThreshold = (range) => {
-      const d = new Date();
-      d.setHours(0,0,0,0);
-      if (range === 'today') return d;
-      if (range === '7d') d.setDate(d.getDate() - 7);
-      else if (range === '1m') d.setMonth(d.getMonth() - 1);
-      else if (range === '3m') d.setMonth(d.getMonth() - 3);
-      else if (range === '6m') d.setMonth(d.getMonth() - 6);
-      else if (range === '1y') d.setFullYear(d.getFullYear() - 1);
-      else return null;
-      return d;
-    };
-
-    const thresholdDate = getDateThreshold(timeRange);
+    const { timeRange, startDate, endDate } = req.query;
+    const bounds = getDateBounds(timeRange, startDate, endDate);
 
     // Find all professionals, sellers, contractors, architects
     const users = await User.find({
       role: { $in: ["professional", "seller", "Contractor", "contractor", "Architect", "architect", "Professional", "Seller"] }
-    }).select("name email role companyName businessName profileViews contactClicks whatsappClicks callClicks phone dailyAnalytics workSamples");
+    }).select("name email role city profession companyName businessName profileViews contactClicks whatsappClicks callClicks phone dailyAnalytics workSamples");
 
   const products = await Product.find().select("user dailyAnalytics views");
   const plans = await ProfessionalPlan.find().select("user dailyAnalytics views");
@@ -333,6 +318,9 @@ const getAdminAnalytics = asyncHandler(async (req, res) => {
       phone: u.phone,
       role: u.role,
       companyName: u.companyName,
+      businessName: u.businessName,
+      city: u.city,
+      profession: u.profession,
       profileViews,
       contactClicks,
       whatsappClicks,
