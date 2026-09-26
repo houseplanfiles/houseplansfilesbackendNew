@@ -16,6 +16,7 @@ const {
   getAllContractorProjects,
   getContractorBySEO,
   getSellerBySEO,
+  addProjectReview,
 } = require("../controllers/userController");
 
 const upload = require("../middleware/uploadMiddleware");
