@@ -1055,7 +1055,8 @@ const getContractorBySEO = asyncHandler(async (req, res) => {
 });
 
 const getSellerBySEO = asyncHandler(async (req, res) => {
-  const { role, businessName } = req.params;
+  const businessName = req.params.businessName || req.params.name || req.params.slug;
+  const city = req.params.city;
   const decodedName = decodeURIComponent(businessName).trim();
 
   let user = null;
@@ -1066,14 +1067,29 @@ const getSellerBySEO = asyncHandler(async (req, res) => {
   if (!user) {
     const namePattern = decodedName.split("-").map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean).join(".*");
 
-    user = await User.findOne({
-      role: { $regex: /^seller$/i },
-      $or: [
-        { companyName: new RegExp("^" + namePattern + "$", "i") },
-        { businessName: new RegExp("^" + namePattern + "$", "i") },
-        { name: new RegExp("^" + namePattern + "$", "i") }
-      ]
-    }).select("-password");
+    if (city) {
+      const cityPattern = decodeURIComponent(city).trim().split("-").map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean).join(".*");
+      user = await User.findOne({
+        role: { $regex: /^seller$/i },
+        city: new RegExp("^" + cityPattern + "$", "i"),
+        $or: [
+          { companyName: new RegExp("^" + namePattern + "$", "i") },
+          { businessName: new RegExp("^" + namePattern + "$", "i") },
+          { name: new RegExp("^" + namePattern + "$", "i") }
+        ]
+      }).select("-password");
+    }
+
+    if (!user) {
+      user = await User.findOne({
+        role: { $regex: /^seller$/i },
+        $or: [
+          { companyName: new RegExp("^" + namePattern + "$", "i") },
+          { businessName: new RegExp("^" + namePattern + "$", "i") },
+          { name: new RegExp("^" + namePattern + "$", "i") }
+        ]
+      }).select("-password");
+    }
 
     if (!user) {
       user = await User.findOne({

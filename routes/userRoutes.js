@@ -52,7 +52,9 @@ router.post("/login", loginUser);
 router.post("/forgot-password", forgotPassword);
 router.put("/reset-password/:token", resetPassword);
 router.get("/store/:sellerId", getSellerPublicProfile);
-router.get("/store/seo/:role/:businessName", getSellerBySEO); // NEW SEO ROUTE
+router.get("/store/seo/:businessName", getSellerBySEO);
+router.get("/store/seo/:city/:businessName", getSellerBySEO);
+router.get("/store/seo/:role/:businessName", getSellerBySEO);
 router.get("/contractor/:id", getContractorPublicProfile); // NEW PUBLIC ROUTE
 router.get("/contractor/seo/:profession/:city/:name", getContractorBySEO); // NEW SEO ROUTE
 router.post("/contractors/:id/reviews", protect, addProjectReview);
