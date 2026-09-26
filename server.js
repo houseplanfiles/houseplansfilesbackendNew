@@ -77,13 +77,41 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ CORS FIXED — only this part changed
+// ✅ CORS — explicitly allow production and preview origins
+const allowedOrigins = [
+  "https://www.houseplanfiles.com",
+  "https://houseplanfiles.com",
+  "https://houseplansfilesfrontend-new.vercel.app",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: true,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (e.g., curl, mobile apps, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// ✅ Handle preflight OPTIONS requests for all routes (required on Vercel)
+app.options("*", cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 
 app.use(express.json());
