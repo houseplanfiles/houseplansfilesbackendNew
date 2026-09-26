@@ -1016,48 +1016,98 @@ const updateProjectSEO = asyncHandler(async (req, res) => {
 
 const getContractorBySEO = asyncHandler(async (req, res) => {
   const { profession, city, name } = req.params;
-  
-  // Try to find an exact or case-insensitive match
-  let user = await User.findOne({
-    role: { $in: ['Professional', 'professional', 'Contractor', 'contractor'] },
-    name: new RegExp('^' + name.replace(/-/g, '.*') + '$', 'i'),
-    city: new RegExp('^' + city.replace(/-/g, '.*') + '$', 'i')
-  }).select('-password');
-  
+  const decodedName = decodeURIComponent(name).trim();
+  const decodedCity = decodeURIComponent(city).trim();
+
+  let user = null;
+  if (decodedName.match(/^[0-9a-fA-F]{24}$/)) {
+    user = await User.findById(decodedName).select("-password");
+  }
+
   if (!user) {
-    // try looser matching
+    const namePattern = decodedName.split("-").map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean).join(".*");
+    const cityPattern = decodedCity.split("-").map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean).join(".*");
+
     user = await User.findOne({
-       name: new RegExp(name.replace(/-/g, '.*'), 'i')
-    }).select('-password');
+      role: { $regex: /^(contractor|architect|professional)$/i },
+      name: new RegExp("^" + namePattern + "$", "i"),
+      city: new RegExp("^" + cityPattern + "$", "i"),
+    }).select("-password");
+
+    if (!user) {
+      user = await User.findOne({
+        role: { $regex: /^(contractor|architect|professional)$/i },
+        $or: [
+          { name: new RegExp(namePattern, "i") },
+          { companyName: new RegExp(namePattern, "i") },
+          { businessName: new RegExp(namePattern, "i") }
+        ]
+      }).select("-password");
+    }
   }
 
   if (user) {
     res.json({ contractor: user });
   } else {
     res.status(404);
-    throw new Error('Contractor not found');
+    throw new Error("Contractor not found");
   }
 });
 
 const getSellerBySEO = asyncHandler(async (req, res) => {
-  const { role, businessName } = req.params;
-  
-  let user = await User.findOne({
-    role: { $in: ['Seller', 'seller'] },
-    companyName: new RegExp('^' + businessName.replace(/-/g, '.*') + '$', 'i')
-  }).select('-password');
+  const businessName = req.params.businessName || req.params.name || req.params.slug;
+  const city = req.params.city;
+  const decodedName = decodeURIComponent(businessName).trim();
+
+  let user = null;
+  if (decodedName.match(/^[0-9a-fA-F]{24}$/)) {
+    user = await User.findById(decodedName).select("-password");
+  }
 
   if (!user) {
-    user = await User.findOne({
-      companyName: new RegExp(businessName.replace(/-/g, '.*'), 'i')
-    }).select('-password');
+    const namePattern = decodedName.split("-").map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean).join(".*");
+
+    if (city) {
+      const cityPattern = decodeURIComponent(city).trim().split("-").map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean).join(".*");
+      user = await User.findOne({
+        role: { $regex: /^seller$/i },
+        city: new RegExp("^" + cityPattern + "$", "i"),
+        $or: [
+          { companyName: new RegExp("^" + namePattern + "$", "i") },
+          { businessName: new RegExp("^" + namePattern + "$", "i") },
+          { name: new RegExp("^" + namePattern + "$", "i") }
+        ]
+      }).select("-password");
+    }
+
+    if (!user) {
+      user = await User.findOne({
+        role: { $regex: /^seller$/i },
+        $or: [
+          { companyName: new RegExp("^" + namePattern + "$", "i") },
+          { businessName: new RegExp("^" + namePattern + "$", "i") },
+          { name: new RegExp("^" + namePattern + "$", "i") }
+        ]
+      }).select("-password");
+    }
+
+    if (!user) {
+      user = await User.findOne({
+        role: { $regex: /^seller$/i },
+        $or: [
+          { companyName: new RegExp(namePattern, "i") },
+          { businessName: new RegExp(namePattern, "i") },
+          { name: new RegExp(namePattern, "i") }
+        ]
+      }).select("-password");
+    }
   }
 
   if (user) {
     res.json({ seller: user });
   } else {
     res.status(404);
-    throw new Error('Seller not found');
+    throw new Error("Seller not found");
   }
 });
 
