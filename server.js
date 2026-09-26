@@ -71,6 +71,8 @@ app.set("trust proxy", 1);
 // ======================================================
 
 const allowedOrigins = [
+  "https://www.houseplanfiles.com",
+  "https://houseplanfiles.com",
   "https://www.houseplansfiles.com",
   "https://houseplansfiles.com",
 
@@ -91,16 +93,21 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // Allow only trusted origins
-    if (allowedOrigins.includes(origin)) {
+    // Check against allowed origins list or matching patterns (subdomains, vercel previews, localhost)
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      /^https:\/\/([a-zA-Z0-9-]+\.)?houseplanfiles\.com$/.test(origin) ||
+      /^https:\/\/([a-zA-Z0-9-]+\.)?houseplansfiles\.com$/.test(origin) ||
+      /^https:\/\/.*\.vercel\.app$/.test(origin) ||
+      /^http:\/\/localhost:[0-9]+$/.test(origin);
+
+    if (isAllowed) {
       return callback(null, true);
     }
 
     console.log("CORS blocked origin:", origin);
 
-    return callback(
-      new Error(`CORS blocked for origin: ${origin}`)
-    );
+    return callback(null, false);
   },
 
   credentials: true,
@@ -120,6 +127,8 @@ const corsOptions = {
     "X-Requested-With",
     "Accept",
     "Origin",
+    "baggage",
+    "sentry-trace",
   ],
 
   exposedHeaders: [
@@ -134,6 +143,7 @@ const corsOptions = {
 // IMPORTANT:
 // CORS middleware should come before routes
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 
 // ======================================================
