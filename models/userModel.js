@@ -38,7 +38,7 @@ const userSchema = mongoose.Schema(
     businessAddress: { type: String },
     materialType: { type: String },
     companyName: { type: String },
-    businessType: { type: String, enum: ["Manufacturer", "Supplier", "Both", "Retail"] },
+    businessType: { type: String, enum: ["Manufacturer", "Supplier", "Both", "Retail", "Local Shop"] },
     category: { type: String },
     contractorType: {
       type: String,
