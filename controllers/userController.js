@@ -783,7 +783,7 @@ const getAllContractorProjects = asyncHandler(async (req, res) => {
 
 const getContractorPublicProfile = asyncHandler(async (req, res) => {
   const contractor = await User.findById(req.params.id).select(
-    "name companyName photoUrl shopImageUrl city state isPanIndia pincode phone address experience profession contractorType selectedPlan coverPhotoUrl packages workSamples portfolioUrl role charges skills qualification"
+    "name companyName photoUrl shopImageUrl city state isPanIndia pincode phone address experience profession contractorType selectedPlan coverPhotoUrl packages workSamples portfolioUrl role charges skills qualification socialLinks website gstNumber serviceTypes"
   );
 
   if (contractor && contractor.role && ["contractor", "architect", "professional"].includes(contractor.role.toLowerCase())) {
