@@ -152,8 +152,9 @@ const userSchema = mongoose.Schema(
       }
     ],
 
-    // --- Social Media Links ---
+    // --- Social Media & Website Links ---
     socialLinks: {
+      website: { type: String, default: "" },
       facebook: { type: String, default: "" },
       instagram: { type: String, default: "" },
       linkedin: { type: String, default: "" },
@@ -164,6 +165,7 @@ const userSchema = mongoose.Schema(
       telegram: { type: String, default: "" },
       threads: { type: String, default: "" },
     },
+    website: { type: String, default: "" },
   },
   {
     timestamps: true,

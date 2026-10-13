@@ -797,7 +797,7 @@ const getContractorPublicProfile = asyncHandler(async (req, res) => {
 
 const getSellerPublicProfile = asyncHandler(async (req, res) => {
   const seller = await User.findById(req.params.sellerId).select(
-    "name businessName shopImageUrl photoUrl city state isPanIndia pincode phone address materialType role businessType contractorType selectedPlan socialLinks"
+    "name businessName shopImageUrl photoUrl city state isPanIndia pincode phone address materialType role businessType contractorType selectedPlan socialLinks website"
   );
 
   if (seller && seller.role === "seller") {
