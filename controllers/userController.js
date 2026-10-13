@@ -177,6 +177,9 @@ const registerUser = asyncHandler(async (req, res) => {
       name: getUserDisplayName(user),
       isApproved: user.isApproved,
       status: user.status,
+      paymentStatus: user.paymentStatus || "Unpaid",
+      selectedPlan: user.selectedPlan || null,
+      contractorType: user.contractorType || "Normal",
       profileViews: user.profileViews,
       whatsappClicks: user.whatsappClicks,
       callClicks: user.callClicks,
@@ -238,11 +241,11 @@ const loginUser = asyncHandler(async (req, res) => {
   if (user && (await user.matchPassword(password))) {
     if (
       ["professional", "seller", "contractor"].includes(user.role.toLowerCase()) &&
-      !user.isApproved
+      user.status === "Rejected"
     ) {
       res.status(403);
       throw new Error(
-        `Your account is currently in "${user.status}" state. Please wait for admin approval.`
+        "Your account is currently rejected. Please contact support."
       );
     }
 
@@ -253,6 +256,8 @@ const loginUser = asyncHandler(async (req, res) => {
       name: getUserDisplayName(user),
       isApproved: user.isApproved,
       status: user.status,
+      paymentStatus: user.paymentStatus || "Unpaid",
+      selectedPlan: user.selectedPlan,
       profession: user.profession,
       businessName: user.businessName,
       companyName: user.companyName,
@@ -783,7 +788,7 @@ const getAllContractorProjects = asyncHandler(async (req, res) => {
 
 const getContractorPublicProfile = asyncHandler(async (req, res) => {
   const contractor = await User.findById(req.params.id).select(
-    "name companyName photoUrl shopImageUrl city state isPanIndia pincode phone address experience profession contractorType selectedPlan coverPhotoUrl packages workSamples portfolioUrl role charges skills qualification socialLinks website gstNumber serviceTypes"
+    "name companyName photoUrl shopImageUrl city state isPanIndia pincode phone address experience profession contractorType selectedPlan coverPhotoUrl packages workSamples portfolioUrl role charges skills qualification socialLinks website gstNumber serviceTypes paymentStatus"
   );
 
   if (contractor && contractor.role && ["contractor", "architect", "professional"].includes(contractor.role.toLowerCase())) {
