@@ -95,6 +95,16 @@ const updateOrderAfterPayment = async (order, paymentDetails = {}) => {
           }
         });
 
+        if (order.isPanIndia !== undefined) {
+          user.isPanIndia = order.isPanIndia;
+        }
+        if (order.selectedStates && order.selectedStates.length > 0) {
+          user.selectedStates = order.selectedStates;
+        }
+        if (order.selectedCities && order.selectedCities.length > 0) {
+          user.city = order.selectedCities;
+        }
+
         user.paymentStatus = "Paid";
         user.isApproved = true; // Auto approve upon payment
         user.status = "Approved";
@@ -181,6 +191,9 @@ const addOrderItems = asyncHandler(async (req, res) => {
     shippingPrice,
     totalPrice,
     orderType: req.body.orderType || "product",
+    selectedStates: req.body.selectedStates || [],
+    selectedCities: req.body.selectedCities || [],
+    isPanIndia: req.body.isPanIndia || false,
   });
 
   const createdOrder = await order.save();
