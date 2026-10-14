@@ -45,6 +45,9 @@ const orderSchema = mongoose.Schema(
       enum: ["product", "subscription"],
       default: "product",
     },
+    selectedStates: [{ type: String }],
+    selectedCities: [{ type: String }],
+    isPanIndia: { type: Boolean, default: false },
     shippingAddress: {
       name: { type: String, required: true },
       email: { type: String, required: true },
