@@ -636,8 +636,28 @@ const updateUser = asyncHandler(async (req, res) => {
     if (req.body.profileStoreManagement !== undefined) {
       user.profileStoreManagement = req.body.profileStoreManagement;
     }
+    if (req.body.contractorType) {
+      user.contractorType = req.body.contractorType;
+    }
     if (req.body.paymentStatus !== undefined) {
       user.paymentStatus = req.body.paymentStatus;
+    }
+
+    // Auto-sync paymentStatus and contractorType
+    if (req.body.paymentStatus === "Paid") {
+      if (!user.contractorType || user.contractorType === "Normal") {
+        user.contractorType = "Verified";
+      }
+      user.isApproved = true;
+      user.status = "Approved";
+    } else if (req.body.contractorType === "Verified" || req.body.contractorType === "Premium") {
+      if (req.body.paymentStatus === undefined || req.body.paymentStatus === "Paid") {
+        user.paymentStatus = "Paid";
+        user.isApproved = true;
+        user.status = "Approved";
+      }
+    } else if (req.body.paymentStatus === "Unpaid" && !req.body.contractorType) {
+      user.contractorType = "Normal";
     }
   }
 
@@ -802,7 +822,7 @@ const getContractorPublicProfile = asyncHandler(async (req, res) => {
 
 const getSellerPublicProfile = asyncHandler(async (req, res) => {
   const seller = await User.findById(req.params.sellerId).select(
-    "name businessName shopImageUrl photoUrl city state isPanIndia pincode phone address materialType role businessType contractorType selectedPlan socialLinks website"
+    "name businessName shopImageUrl photoUrl city state isPanIndia pincode phone address materialType role businessType contractorType selectedPlan socialLinks website paymentStatus"
   );
 
   if (seller && seller.role === "seller") {
