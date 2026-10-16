@@ -2,20 +2,24 @@
 const express = require("express");
 const router = express.Router();
 const {
-  addVideoLink, // Yahan naam update kiya hai
+  addVideoLink,
   getVideos,
   getUniqueTopics,
+  updateVideo,
   deleteVideo,
-} = require("../controllers/admin/videoController.js"); // Path check kar lein
+} = require("../controllers/admin/videoController.js");
 const { protect, admin } = require("../middleware/authMiddleware.js");
 
 router.get("/topics", getUniqueTopics);
 
 router
   .route("/")
-  .post(protect, admin, addVideoLink) // Yahan bhi naam update kiya hai
+  .post(protect, admin, addVideoLink)
   .get(getVideos);
 
-router.route("/:id").delete(protect, admin, deleteVideo);
+router
+  .route("/:id")
+  .put(protect, admin, updateVideo)
+  .delete(protect, admin, deleteVideo);
 
 module.exports = router;

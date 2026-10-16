@@ -17,7 +17,7 @@ const validateAndExtractYouTubeId = (url) => {
  * @access  Private/Admin
  */
 const addVideoLink = asyncHandler(async (req, res) => {
-  const { title, youtubeLink, topic, productLink } = req.body;
+  const { title, description, youtubeLink, topic, productLink } = req.body;
 
   if (!title || !youtubeLink || !topic) {
     res.status(400);
@@ -47,6 +47,7 @@ const addVideoLink = asyncHandler(async (req, res) => {
   const video = await Video.create({
     user: req.user._id,
     title: title.trim(),
+    description: description ? description.trim() : "",
     youtubeLink: youtubeLink.trim(),
     topic: topic.trim(),
     youtubeVideoId: videoId,
@@ -85,6 +86,41 @@ const getUniqueTopics = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Update a video link
+ * @route   PUT /api/videos/:id
+ * @access  Private/Admin
+ */
+const updateVideo = asyncHandler(async (req, res) => {
+  const { title, description, youtubeLink, topic, productLink } = req.body;
+  const video = await Video.findById(req.params.id);
+
+  if (!video) {
+    res.status(404);
+    throw new Error("Video not found");
+  }
+
+  if (title) video.title = title.trim();
+  if (description !== undefined) video.description = description.trim();
+  if (topic) video.topic = topic.trim();
+  if (productLink !== undefined) {
+    video.productLink = productLink === "none" || !productLink ? null : productLink;
+  }
+
+  if (youtubeLink && youtubeLink.trim() !== video.youtubeLink) {
+    const videoId = validateAndExtractYouTubeId(youtubeLink);
+    if (!videoId) {
+      res.status(400);
+      throw new Error("Invalid YouTube URL format. Please provide a valid link.");
+    }
+    video.youtubeLink = youtubeLink.trim();
+    video.youtubeVideoId = videoId;
+  }
+
+  const updatedVideo = await video.save();
+  res.json(updatedVideo);
+});
+
+/**
  * @desc    Delete a video link
  * @route   DELETE /api/videos/:id
  * @access  Private/Admin
@@ -105,5 +141,6 @@ module.exports = {
   addVideoLink,
   getVideos,
   getUniqueTopics,
+  updateVideo,
   deleteVideo,
 };
