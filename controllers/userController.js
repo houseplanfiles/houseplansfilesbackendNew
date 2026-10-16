@@ -85,15 +85,15 @@ const validateRoleFields = (role, body) => {
         throw new Error(
           "Full Name, Address, City, Experience, and Profession are required"
         );
-      
+
       let parsedStates = [];
       let parsedCities = [];
       try {
         parsedStates = body.selectedStates ? JSON.parse(body.selectedStates) : [];
-      } catch(e) { parsedStates = []; }
+      } catch (e) { parsedStates = []; }
       try {
         parsedCities = body.selectedCities ? JSON.parse(body.selectedCities) : [];
-      } catch(e) { parsedCities = []; }
+      } catch (e) { parsedCities = []; }
 
       return {
         name,
