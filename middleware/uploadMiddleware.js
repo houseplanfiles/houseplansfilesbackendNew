@@ -16,9 +16,10 @@ const s3 = new S3Client({
 // Memory storage — we process the image before sending to S3
 const memoryStorage = multer.memoryStorage();
 
+// Allowed raw upload limit: up to 35MB raw so high-res images can be received and compressed safely down to under 15MB
 const uploadToMemory = multer({
   storage: memoryStorage,
-  limits: { fileSize: 1024 * 1024 * 20 }, // 20MB limit for raw uploads
+  limits: { fileSize: 1024 * 1024 * 35 },
 });
 
 /**
@@ -32,7 +33,6 @@ const uploadBufferToS3 = async (buffer, key, contentType) => {
       Key: key,
       Body: buffer,
       ContentType: contentType,
-      // FIX: Cache images for 1 year (was missing before, causing 14MB re-downloads on every visit)
       CacheControl: "max-age=31536000, public, immutable",
     },
   });
@@ -46,12 +46,9 @@ const uploadBufferToS3 = async (buffer, key, contentType) => {
 
 /**
  * Compresses and converts image to WebP, then uploads to S3.
- * Also generates a thumbnail (400px wide) for use in cards/listings.
- * Falls back to direct S3 upload for non-image files.
- *
- * Returns:
- *   location      — full-size WebP URL (max 1200px)
- *   thumbnailUrl  — thumbnail WebP URL (max 400px) for card display
+ * If file size is large (>15MB), automatically applies aggressive compression to guarantee final size stays well under 15MB.
+ * Also generates a fast thumbnail (400px wide) for use in cards/listings.
+ * Falls back to direct S3 upload for non-image files with a strict 15MB cap.
  */
 const processAndUpload = async (file) => {
   const isImage = file.mimetype.startsWith("image/");
@@ -60,7 +57,12 @@ const processAndUpload = async (file) => {
   const key = `${timestamp}_${file.fieldname}${ext}`;
 
   if (!isImage) {
-    // Non-image: upload directly
+    // Non-image files (e.g. PDFs): Enforce max 15MB limit
+    const MAX_NON_IMAGE_BYTES = 15 * 1024 * 1024;
+    if (file.buffer.length > MAX_NON_IMAGE_BYTES) {
+      throw new Error(`File "${file.originalname}" exceeds the maximum limit of 15 MB.`);
+    }
+
     const location = await uploadBufferToS3(file.buffer, key, file.mimetype);
     return {
       location,
@@ -71,16 +73,29 @@ const processAndUpload = async (file) => {
     };
   }
 
-  // FIX: Generate full-size + thumbnail in parallel
+  // Determine compression parameters based on uploaded file size
+  const rawSizeMB = file.buffer.length / (1024 * 1024);
+  let maxDimension = 1600;
+  let quality = 80;
+
+  if (rawSizeMB > 15) {
+    // If user uploaded > 15MB image, compress down strongly
+    maxDimension = 1200;
+    quality = 70;
+  } else if (rawSizeMB > 8) {
+    maxDimension = 1400;
+    quality = 75;
+  }
+
+  // Generate full-size + thumbnail in parallel
   const [fullBuffer, thumbBuffer] = await Promise.all([
     sharp(file.buffer)
-      .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 80 })
+      .resize({ width: maxDimension, height: maxDimension, fit: "inside", withoutEnlargement: true })
+      .webp({ quality })
       .toBuffer(),
     sharp(file.buffer)
-      // FIX: Thumbnail sized for card display (400px wide) — saves ~95% bandwidth on listings
       .resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 75 })
+      .webp({ quality: 70 })
       .toBuffer(),
   ]);
 
