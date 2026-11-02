@@ -32,6 +32,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const feedRoutes = require("./routes/feed.route");
 const sellerDashboardRoutes = require("./routes/sellerDashboardRoutes");
 const leadRoutes = require("./routes/leadRoutes");
+const leadPreferenceRoutes = require("./routes/leadPreferenceRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 
 // Middleware
@@ -383,6 +384,8 @@ app.use(
   "/api/leads",
   leadRoutes
 );
+
+app.use("/api/lead-preferences", leadPreferenceRoutes);
 
 app.use(
   "/api/analytics",
