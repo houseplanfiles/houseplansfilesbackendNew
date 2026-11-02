@@ -60,7 +60,7 @@ const userSchema = mongoose.Schema(
     },
     paymentStatus: { 
       type: String, 
-      enum: ["Unpaid", "Paid"], 
+      enum: ["Unpaid", "Paid", "Free"], 
       default: "Unpaid" 
     },
     paymentDetails: {

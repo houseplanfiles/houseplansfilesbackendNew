@@ -30,19 +30,20 @@ const validateRoleFields = (role, body) => {
     case "user":
       if (!name) throw new Error("Full Name is required for Users");
       return { name, isApproved: true, status: "Approved" };
-    case "professional":
-      if (!name || !profession || !city || !experience)
-        throw new Error(
-          "Full Name, Profession, City, and Experience are required"
-        );
+    case "professional": {
+      const isFree = body.selectedPlan === "Free";
+      if (!name || !profession)
+        throw new Error("Full Name and Profession are required");
+      if (!isFree && (!city || !experience))
+        throw new Error("City and Experience are required for paid plan");
       return {
         name,
         profession,
-        city,
+        city: city || "N/A",
         state: body.state || "",
         isPanIndia: body.isPanIndia === "true" || body.isPanIndia === true || false,
         pincode: body.pincode || "",
-        experience,
+        experience: experience || "N/A",
         companyName: companyName || "",
         address: address || "",
         qualification: body.qualification || "",
@@ -55,16 +56,18 @@ const validateRoleFields = (role, body) => {
         profileCreation: body.profileCreation === "true" || body.profileCreation === true || false,
         profileStoreManagement: body.profileStoreManagement || "None",
       };
-    case "seller":
-      if (!businessName || !address || !city)
-        throw new Error(
-          "Business Name, Address, and City are required"
-        );
+    }
+    case "seller": {
+      const isFreeS = body.selectedPlan === "Free";
+      if (!businessName)
+        throw new Error("Business Name is required");
+      if (!isFreeS && (!address || !city))
+        throw new Error("Address and City are required for paid plan");
       return {
         name: name || "",
         businessName,
-        address,
-        city,
+        address: address || "N/A",
+        city: city || "N/A",
         state: body.state || "",
         isPanIndia: body.isPanIndia === "true" || body.isPanIndia === true || false,
         materialType: body.materialType || "",
@@ -80,11 +83,13 @@ const validateRoleFields = (role, body) => {
         profileCreation: body.profileCreation === "true" || body.profileCreation === true || false,
         profileStoreManagement: body.profileStoreManagement || "None",
       };
-    case "Contractor":
-      if (!name || !address || (!city && !body.selectedCities) || !experience || !profession)
-        throw new Error(
-          "Full Name, Address, City, Experience, and Profession are required"
-        );
+    }
+    case "Contractor": {
+      const isFreeC = body.selectedPlan === "Free";
+      if (!name || !profession)
+        throw new Error("Full Name and Profession are required");
+      if (!isFreeC && (!address || (!city && !body.selectedCities) || !experience))
+        throw new Error("Address, City, and Experience are required for paid plan");
 
       let parsedStates = [];
       let parsedCities = [];
@@ -98,15 +103,15 @@ const validateRoleFields = (role, body) => {
       return {
         name,
         companyName: companyName || "",
-        address,
-        city: city || "",
+        address: address || "N/A",
+        city: city || "N/A",
         state: body.state || "",
         isPanIndia: body.isPanIndia === "true" || body.isPanIndia === true || false,
         pincode: body.pincode || "",
         selectedStates: parsedStates,
         selectedCities: parsedCities,
         registrationAmount: body.registrationAmount ? Number(body.registrationAmount) : 0,
-        experience,
+        experience: experience || "N/A",
         profession,
         gstNumber,
         qualification: body.qualification || "",
@@ -118,6 +123,7 @@ const validateRoleFields = (role, body) => {
         profileCreation: body.profileCreation === "true" || body.profileCreation === true || false,
         profileStoreManagement: body.profileStoreManagement || "None",
       };
+    }
     case "admin":
       if (!name) throw new Error("Full Name is required for Admin");
       return { name, isApproved: true, status: "Approved" };
@@ -170,6 +176,12 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     const user = await User.create(userData);
+    // Handle Free plan: set paymentStatus from body if provided
+    if (req.body.paymentStatus === "Free") {
+      user.paymentStatus = "Free";
+      user.selectedPlan = "Free";
+      await user.save();
+    }
     res.status(201).json({
       _id: user._id,
       email: user.email,
@@ -610,7 +622,6 @@ const updateUser = asyncHandler(async (req, res) => {
       if (req.body.seoKeywords !== undefined) user.seoKeywords = req.body.seoKeywords;
       break;
   }
-
   if (req.user.role === "admin") {
     if (req.body.status) {
       user.status = req.body.status;
@@ -642,7 +653,6 @@ const updateUser = asyncHandler(async (req, res) => {
     if (req.body.paymentStatus !== undefined) {
       user.paymentStatus = req.body.paymentStatus;
     }
-
     // Auto-sync paymentStatus and contractorType
     if (req.body.paymentStatus === "Paid") {
       if (!user.contractorType || user.contractorType === "Normal") {
@@ -660,9 +670,7 @@ const updateUser = asyncHandler(async (req, res) => {
       user.contractorType = "Normal";
     }
   }
-
   const updatedUser = await user.save();
-
   res.json({
     _id: updatedUser._id,
     name: getUserDisplayName(updatedUser),
@@ -706,7 +714,6 @@ const updateUser = asyncHandler(async (req, res) => {
     token: generateToken(updatedUser._id),
   });
 });
-
 const deleteUser = asyncHandler(async (req, res) => {
   if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
     res.status(400);
@@ -734,7 +741,6 @@ const deleteUser = asyncHandler(async (req, res) => {
 });
 
 const SellerProduct = require("../models/sellerProductModel.js");
-
 const getUserStats = asyncHandler(async (req, res) => {
   const stats = await User.aggregate([
     { $match: { role: { $ne: "admin" } } },
@@ -801,11 +807,9 @@ const getAllContractorProjects = asyncHandler(async (req, res) => {
       });
     }
   });
-
   console.log(`Debug: Total projects gathered: ${allProjects.length}`);
   res.json(allProjects);
 });
-
 const getContractorPublicProfile = asyncHandler(async (req, res) => {
   const contractor = await User.findById(req.params.id).select(
     "name companyName photoUrl shopImageUrl city state isPanIndia pincode phone address experience profession contractorType selectedPlan coverPhotoUrl packages workSamples portfolioUrl role charges skills qualification socialLinks website gstNumber serviceTypes paymentStatus"
@@ -931,7 +935,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
       </body>
       </html>
     `;
-
     await sendEmail({
       to: user.email,
       subject: "🔐 HousePlansFiles - Password Reset Request",
@@ -1070,7 +1073,6 @@ const getContractorBySEO = asyncHandler(async (req, res) => {
       }).select("-password");
     }
   }
-
   if (user) {
     res.json({ contractor: user });
   } else {
