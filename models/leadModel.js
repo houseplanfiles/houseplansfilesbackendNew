@@ -27,6 +27,11 @@ const leadSchema = mongoose.Schema(
       required: [true, "Lead unlock price is required"],
       default: 0,
     },
+    qualityTier: {
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
+    },
     
     // --- Hidden Client/Contact details ---
     clientName: {

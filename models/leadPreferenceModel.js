@@ -12,6 +12,11 @@ const leadPreferenceSchema = new mongoose.Schema(
       required: true,
     },
     leadCount: { type: Number, required: true, min: 1 },
+    qualityPreference: {
+      type: String,
+      enum: ["all", "low", "medium", "high"],
+      default: "all",
+    },
     city: { type: String, default: "" },
     serviceType: { type: String, default: "" },
     budget: { type: String, default: "" },

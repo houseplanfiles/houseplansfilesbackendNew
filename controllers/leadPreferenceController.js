@@ -3,7 +3,7 @@ const LeadPreference = require("../models/leadPreferenceModel.js");
 
 // POST /api/lead-preferences  (professional)
 const createLeadPreference = asyncHandler(async (req, res) => {
-  const { frequency, leadCount, city, serviceType, budget, phone, notes } =
+  const { frequency, leadCount, qualityPreference, city, serviceType, budget, phone, notes } =
     req.body;
   if (!["weekly", "monthly", "yearly"].includes(frequency)) {
     res.status(400);
@@ -14,10 +14,14 @@ const createLeadPreference = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Please enter a valid number of leads");
   }
+  const validQuality = ["all", "low", "medium", "high"].includes(qualityPreference)
+    ? qualityPreference
+    : "all";
   const pref = await LeadPreference.create({
     user: req.user._id,
     frequency,
     leadCount: count,
+    qualityPreference: validQuality,
     city: city || req.user.city || "",
     serviceType: serviceType || "",
     budget: budget || "",
@@ -42,6 +46,8 @@ const getAllLeadPreferences = asyncHandler(async (req, res) => {
     filter.status = req.query.status;
   if (req.query.frequency && req.query.frequency !== "all")
     filter.frequency = req.query.frequency;
+  if (req.query.qualityPreference && req.query.qualityPreference !== "all")
+    filter.qualityPreference = req.query.qualityPreference;
   const prefs = await LeadPreference.find(filter)
     .populate("user", "name email phone role profession city companyName")
     .sort({ createdAt: -1 });

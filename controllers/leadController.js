@@ -91,13 +91,18 @@ const submitPublicLead = asyncHandler(async (req, res) => {
     city,
     category,
     requirements,
-    budget
+    budget,
+    qualityTier
   } = req.body;
 
   if (!name || !phone || !category || !city || !requirements) {
     res.status(400);
     throw new Error("Please provide all required fields");
   }
+
+  const validQuality = ["low", "medium", "high"].includes(qualityTier)
+    ? qualityTier
+    : "medium";
 
   // Create lead with default settings for a public submission
   const lead = await Lead.create({
@@ -106,6 +111,7 @@ const submitPublicLead = asyncHandler(async (req, res) => {
     city,
     budget: budget || "Not Specified",
     requirements,
+    qualityTier: validQuality,
     price: 99, // default price for new leads
     clientName: name,
     clientPhone: phone,
@@ -132,6 +138,7 @@ const createLead = asyncHandler(async (req, res) => {
     budget,
     requirements,
     price,
+    qualityTier,
     clientName,
     clientPhone,
     clientEmail,
@@ -151,6 +158,10 @@ const createLead = asyncHandler(async (req, res) => {
     throw new Error("Please provide all required fields.");
   }
 
+  const validQuality = ["low", "medium", "high"].includes(qualityTier)
+    ? qualityTier
+    : "medium";
+
   const lead = new Lead({
     title,
     category,
@@ -158,6 +169,7 @@ const createLead = asyncHandler(async (req, res) => {
     budget,
     requirements,
     price,
+    qualityTier: validQuality,
     clientName,
     clientPhone,
     clientEmail: clientEmail || "",
@@ -184,6 +196,9 @@ const updateLead = asyncHandler(async (req, res) => {
   lead.budget = req.body.budget || lead.budget;
   lead.requirements = req.body.requirements || lead.requirements;
   lead.price = req.body.price !== undefined ? req.body.price : lead.price;
+  if (req.body.qualityTier && ["low", "medium", "high"].includes(req.body.qualityTier)) {
+    lead.qualityTier = req.body.qualityTier;
+  }
   lead.clientName = req.body.clientName || lead.clientName;
   lead.clientPhone = req.body.clientPhone || lead.clientPhone;
   lead.clientEmail = req.body.clientEmail !== undefined ? req.body.clientEmail : lead.clientEmail;
