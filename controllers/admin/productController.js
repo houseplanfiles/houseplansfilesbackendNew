@@ -66,6 +66,7 @@ const getProducts = asyncHandler(async (req, res) => {
     searchTerm,
     country,
     category,
+    planType,
     plotSize,
     plotArea,
     direction,
@@ -84,6 +85,21 @@ const getProducts = asyncHandler(async (req, res) => {
           { planType: { $regex: /^Floor Plans$/i } },
           { category: { $regex: /^Floor Plans$/i } },
           { Categories: { $regex: /floor-plans/i } },
+        ],
+      };
+    } else if (
+      lowerCasePlanCategory === "readymade-house-plans" ||
+      lowerCasePlanCategory === "readymade-plans" ||
+      lowerCasePlanCategory === "all-plans"
+    ) {
+      categoryQuery = {
+        $or: [
+          { planType: { $regex: /Floor Plan/i } },
+          { category: { $regex: /Floor Plan/i } },
+          { Categories: { $regex: /floor-plan/i } },
+          { planType: { $regex: /Elevation/i } },
+          { category: { $regex: /Elevation/i } },
+          { Categories: { $regex: /elevation/i } },
         ],
       };
     } else if (lowerCasePlanCategory === "elevations") {
@@ -126,6 +142,7 @@ const getProducts = asyncHandler(async (req, res) => {
   }
   if (country) otherFilters.country = country;
   if (category && category !== "all") otherFilters.category = category;
+  if (planType && planType !== "all") otherFilters.planType = { $regex: new RegExp(planType, "i") };
   if (plotSize && plotSize !== "all") otherFilters.plotSize = plotSize;
   if (direction && direction !== "all") otherFilters.direction = direction;
   if (propertyType && propertyType !== "all")
