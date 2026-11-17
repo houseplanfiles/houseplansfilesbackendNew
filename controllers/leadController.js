@@ -179,6 +179,75 @@ const createLead = asyncHandler(async (req, res) => {
   res.status(201).json(createdLead);
 });
 
+// @desc    Transfer/Assign a lead to a professional user directly by Admin
+// @route   POST /api/leads/:id/transfer
+// @access  Private/Admin
+const transferLead = asyncHandler(async (req, res) => {
+  const { targetUserId, targetUserEmail, targetUserPhone } = req.body;
+  const lead = await Lead.findById(req.params.id);
+
+  if (!lead) {
+    res.status(404);
+    throw new Error("Lead not found");
+  }
+
+  const User = require("../models/userModel");
+  let targetUser = null;
+
+  if (targetUserId) {
+    targetUser = await User.findById(targetUserId);
+  } else if (targetUserEmail) {
+    targetUser = await User.findOne({ email: targetUserEmail.trim().toLowerCase() });
+  } else if (targetUserPhone) {
+    targetUser = await User.findOne({ phone: targetUserPhone.trim() });
+  }
+
+  if (!targetUser) {
+    res.status(404);
+    throw new Error("Target professional user not found");
+  }
+
+  lead.buyer = targetUser._id;
+  lead.status = "Sold";
+  lead.paymentDetails = {
+    razorpay_order_id: "ADMIN_ASSIGNED",
+    razorpay_payment_id: `ASSIGNED_BY_${req.user._id}`,
+    razorpay_signature: "ADMIN_OVERRIDE",
+    purchasedAt: new Date(),
+  };
+
+  const updatedLead = await lead.save();
+  res.json({
+    message: `Lead transferred successfully to ${targetUser.name || targetUser.businessName || targetUser.email}`,
+    lead: updatedLead,
+  });
+});
+
+// @desc    Publish a lead to public lead board
+// @route   POST /api/leads/:id/publish-public
+// @access  Private/Admin
+const publishLeadPublic = asyncHandler(async (req, res) => {
+  const { price } = req.body;
+  const lead = await Lead.findById(req.params.id);
+
+  if (!lead) {
+    res.status(404);
+    throw new Error("Lead not found");
+  }
+
+  lead.status = "Available";
+  lead.buyer = null;
+  if (price !== undefined && Number(price) >= 0) {
+    lead.price = Number(price);
+  }
+
+  const updatedLead = await lead.save();
+  res.json({
+    message: "Lead published to public board successfully",
+    lead: updatedLead,
+  });
+});
+
 // @desc    Update a lead (Admin only)
 // @route   PUT /api/leads/:id
 // @access  Private/Admin
@@ -396,6 +465,8 @@ module.exports = {
   createLead,
   updateLead,
   deleteLead,
+  transferLead,
+  publishLeadPublic,
   createLeadRazorpayOrder,
   verifyLeadPayment,
   getMyUnlockedLeads,
