@@ -223,6 +223,55 @@ const transferLead = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Bulk transfer multiple leads to a single professional user (Admin only)
+// @route   POST /api/leads/bulk-transfer
+// @access  Private/Admin
+const bulkTransferLeads = asyncHandler(async (req, res) => {
+  const { leadIds, targetUserId, targetUserEmail, targetUserPhone } = req.body;
+
+  if (!Array.isArray(leadIds) || leadIds.length === 0) {
+    res.status(400);
+    throw new Error("Please provide at least one leadId to transfer");
+  }
+
+  const User = require("../models/userModel");
+  let targetUser = null;
+
+  if (targetUserId) {
+    targetUser = await User.findById(targetUserId);
+  } else if (targetUserEmail) {
+    targetUser = await User.findOne({ email: targetUserEmail.trim().toLowerCase() });
+  } else if (targetUserPhone) {
+    targetUser = await User.findOne({ phone: targetUserPhone.trim() });
+  }
+
+  if (!targetUser) {
+    res.status(404);
+    throw new Error("Target professional user not found");
+  }
+
+  const result = await Lead.updateMany(
+    { _id: { $in: leadIds } },
+    {
+      $set: {
+        buyer: targetUser._id,
+        status: "Sold",
+        paymentDetails: {
+          razorpay_order_id: "BULK_ADMIN_ASSIGNED",
+          razorpay_payment_id: `ASSIGNED_BY_${req.user._id}`,
+          razorpay_signature: "ADMIN_OVERRIDE",
+          purchasedAt: new Date(),
+        },
+      },
+    }
+  );
+
+  res.json({
+    message: `${result.modifiedCount} leads transferred successfully to ${targetUser.name || targetUser.businessName || targetUser.email}`,
+    modifiedCount: result.modifiedCount,
+  });
+});
+
 // @desc    Publish a lead to public lead board
 // @route   POST /api/leads/:id/publish-public
 // @access  Private/Admin
@@ -466,6 +515,7 @@ module.exports = {
   updateLead,
   deleteLead,
   transferLead,
+  bulkTransferLeads,
   publishLeadPublic,
   createLeadRazorpayOrder,
   verifyLeadPayment,
