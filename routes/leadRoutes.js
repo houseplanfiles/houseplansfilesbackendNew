@@ -7,6 +7,9 @@ const {
   createLead,
   updateLead,
   deleteLead,
+  transferLead,
+  bulkTransferLeads,
+  publishLeadPublic,
   createLeadRazorpayOrder,
   verifyLeadPayment,
   getMyUnlockedLeads,
@@ -35,7 +38,10 @@ router
   .put(protect, admin, updateLead)
   .delete(protect, admin, deleteLead);
 
+router.route("/bulk-transfer").post(protect, admin, bulkTransferLeads);
 router.route("/:id/buy").post(protect, createLeadRazorpayOrder);
 router.route("/:id/verify").post(protect, verifyLeadPayment);
+router.route("/:id/transfer").post(protect, admin, transferLead);
+router.route("/:id/publish-public").post(protect, admin, publishLeadPublic);
 
 module.exports = router;
