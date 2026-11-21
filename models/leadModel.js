@@ -53,6 +53,17 @@ const leadSchema = mongoose.Schema(
       enum: ["Pending", "Available", "Sold"],
       default: "Pending",
     },
+    // If targeted/offered to specific contractors before purchase
+    allowedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    isBroadcasted: {
+      type: Boolean,
+      default: false,
+    },
     buyer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
