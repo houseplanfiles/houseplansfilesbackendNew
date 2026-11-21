@@ -48,6 +48,9 @@ const getAllLeadPreferences = asyncHandler(async (req, res) => {
     filter.frequency = req.query.frequency;
   if (req.query.qualityPreference && req.query.qualityPreference !== "all")
     filter.qualityPreference = req.query.qualityPreference;
+  if (req.query.city && req.query.city !== "all") {
+    filter.city = { $regex: req.query.city.trim(), $options: "i" };
+  }
   const prefs = await LeadPreference.find(filter)
     .populate("user", "name email phone role profession city companyName")
     .sort({ createdAt: -1 });
