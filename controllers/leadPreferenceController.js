@@ -63,6 +63,8 @@ const updateLeadPreferenceStatus = asyncHandler(async (req, res) => {
   }
   if (req.body.status) pref.status = req.body.status;
   if (req.body.adminNote !== undefined) pref.adminNote = req.body.adminNote;
+  if (req.body.deliveredCount !== undefined) pref.deliveredCount = Number(req.body.deliveredCount);
+  if (req.body.leadCount !== undefined) pref.leadCount = Number(req.body.leadCount);
   await pref.save();
   await pref.populate("user", "name email phone role profession city companyName");
   res.json(pref);

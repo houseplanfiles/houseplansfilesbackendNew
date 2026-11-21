@@ -5,6 +5,7 @@ const Lead = require("../models/leadModel");
 const Inquiry = require("../models/inquiryModel");
 const SellerInquiry = require("../models/sellerinquiryModel");
 const CorporateInquiry = require("../models/corporateInquiryModel");
+const LeadPreference = require("../models/leadPreferenceModel");
 
 // Helper to clean env variables
 const getEnv = (key) => (process.env[key] ? process.env[key].trim() : "");
@@ -34,8 +35,32 @@ const revealLead = (leadObj) => {
 const getLeads = asyncHandler(async (req, res) => {
   const currentUserId = req.user ? req.user._id.toString() : null;
 
-  // 1. Fetch from Lead model only
-  const adminLeads = await Lead.find({ status: { $in: ["Available", "Sold"] } })
+  // 1. Fetch leads:
+  // If a lead has allowedUsers specified, only those users (or buyer) can see it
+  let filter = { status: { $in: ["Available", "Sold"] } };
+
+  if (currentUserId) {
+    filter = {
+      status: { $in: ["Available", "Sold"] },
+      $or: [
+        { allowedUsers: { $exists: false } },
+        { allowedUsers: { $size: 0 } },
+        { allowedUsers: req.user._id },
+        { buyer: req.user._id },
+      ],
+    };
+  } else {
+    // Unauthenticated visitors only see truly public leads without specific target restrictions
+    filter = {
+      status: { $in: ["Available", "Sold"] },
+      $or: [
+        { allowedUsers: { $exists: false } },
+        { allowedUsers: { $size: 0 } },
+      ],
+    };
+  }
+
+  const adminLeads = await Lead.find(filter)
     .sort({ createdAt: -1 })
     .lean();
 
@@ -217,6 +242,25 @@ const transferLead = asyncHandler(async (req, res) => {
   };
 
   const updatedLead = await lead.save();
+
+  // If this target user has an approved or pending lead preference request, increment deliveredCount
+  try {
+    const activePref = await LeadPreference.findOne({
+      user: targetUser._id,
+      status: { $in: ["approved", "pending", "contacted"] },
+    }).sort({ createdAt: -1 });
+
+    if (activePref) {
+      activePref.deliveredCount = (activePref.deliveredCount || 0) + 1;
+      if (activePref.deliveredCount >= activePref.leadCount) {
+        activePref.status = "completed";
+      }
+      await activePref.save();
+    }
+  } catch (err) {
+    console.error("Error updating leadPreference deliveredCount:", err);
+  }
+
   res.json({
     message: `Lead transferred successfully to ${targetUser.name || targetUser.businessName || targetUser.email}`,
     lead: updatedLead,
@@ -266,9 +310,63 @@ const bulkTransferLeads = asyncHandler(async (req, res) => {
     }
   );
 
+  // If this target user has an active lead preference request, increment deliveredCount by modifiedCount
+  try {
+    if (result.modifiedCount > 0) {
+      const activePref = await LeadPreference.findOne({
+        user: targetUser._id,
+        status: { $in: ["approved", "pending", "contacted"] },
+      }).sort({ createdAt: -1 });
+
+      if (activePref) {
+        activePref.deliveredCount = (activePref.deliveredCount || 0) + result.modifiedCount;
+        if (activePref.deliveredCount >= activePref.leadCount) {
+          activePref.status = "completed";
+        }
+        await activePref.save();
+      }
+    }
+  } catch (err) {
+    console.error("Error updating leadPreference deliveredCount for bulk transfer:", err);
+  }
+
   res.json({
     message: `${result.modifiedCount} leads transferred successfully to ${targetUser.name || targetUser.businessName || targetUser.email}`,
     modifiedCount: result.modifiedCount,
+  });
+});
+
+// @desc    Target / Offer a lead to specific selected contractors (Admin only)
+// @route   POST /api/leads/:id/target-contractors
+// @access  Private/Admin
+const targetContractorsForLead = asyncHandler(async (req, res) => {
+  const { contractorIds, isBroadcasted } = req.body;
+  const lead = await Lead.findById(req.params.id);
+
+  if (!lead) {
+    res.status(404);
+    throw new Error("Lead not found");
+  }
+
+  // contractorIds is an array of user IDs
+  if (Array.isArray(contractorIds)) {
+    lead.allowedUsers = contractorIds;
+  }
+  if (isBroadcasted !== undefined) {
+    lead.isBroadcasted = Boolean(isBroadcasted);
+  }
+
+  // If lead was pending, make it available so allowed users can see and buy it
+  if (lead.status === "Pending") {
+    lead.status = "Available";
+  }
+
+  const updatedLead = await lead.save();
+  await updatedLead.populate("allowedUsers", "name businessName email phone city profession role");
+
+  res.json({
+    message: `Lead successfully targeted to ${lead.allowedUsers.length} contractor(s)`,
+    lead: updatedLead,
   });
 });
 
@@ -286,13 +384,15 @@ const publishLeadPublic = asyncHandler(async (req, res) => {
 
   lead.status = "Available";
   lead.buyer = null;
+  lead.allowedUsers = []; // Clear restriction so all contractors can see
+  lead.isBroadcasted = true;
   if (price !== undefined && Number(price) >= 0) {
     lead.price = Number(price);
   }
 
   const updatedLead = await lead.save();
   res.json({
-    message: "Lead published to public board successfully",
+    message: "Lead published to public board successfully (open to all)",
     lead: updatedLead,
   });
 });
@@ -516,6 +616,7 @@ module.exports = {
   deleteLead,
   transferLead,
   bulkTransferLeads,
+  targetContractorsForLead,
   publishLeadPublic,
   createLeadRazorpayOrder,
   verifyLeadPayment,

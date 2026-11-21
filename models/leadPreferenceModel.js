@@ -12,6 +12,7 @@ const leadPreferenceSchema = new mongoose.Schema(
       required: true,
     },
     leadCount: { type: Number, required: true, min: 1 },
+    deliveredCount: { type: Number, default: 0 },
     qualityPreference: {
       type: String,
       enum: ["all", "low", "medium", "high"],
@@ -24,7 +25,7 @@ const leadPreferenceSchema = new mongoose.Schema(
     notes: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["pending", "contacted", "approved", "rejected"],
+      enum: ["pending", "contacted", "approved", "rejected", "completed"],
       default: "pending",
     },
     adminNote: { type: String, default: "" },
