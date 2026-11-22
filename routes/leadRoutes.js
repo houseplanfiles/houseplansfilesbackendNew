@@ -13,6 +13,7 @@ const {
   publishLeadPublic,
   createLeadRazorpayOrder,
   verifyLeadPayment,
+  getMyTargetedLeads,
   getMyUnlockedLeads,
   submitPublicLead,
 } = require("../controllers/leadController");
@@ -21,7 +22,10 @@ const { protect, admin, softProtect } = require("../middleware/authMiddleware");
 // Public route for form submissions
 router.route("/public").post(submitPublicLead);
 
-// Contractor/User only: get purchased leads
+// Contractor/User only: get targeted leads offered by admin (unpaid, contact masked)
+router.route("/my-targeted").get(protect, getMyTargetedLeads);
+
+// Contractor/User only: get purchased/assigned leads (paid/unlocked, contact revealed)
 router.route("/my-unlocked").get(protect, getMyUnlockedLeads);
 
 // Admin-only: full unmasked view of ALL inquiries+leads

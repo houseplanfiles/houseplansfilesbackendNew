@@ -595,6 +595,21 @@ const verifyLeadPayment = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get leads targeted/assigned to currently logged in professional (Available for them to buy, masked)
+// @route   GET /api/leads/my-targeted
+// @access  Private
+const getMyTargetedLeads = asyncHandler(async (req, res) => {
+  // Find leads where allowedUsers contains current user AND status is Available (not yet bought)
+  const leads = await Lead.find({
+    allowedUsers: req.user._id,
+    status: "Available",
+  }).sort({ createdAt: -1 });
+
+  // Mask sensitive contact details until purchased
+  const masked = leads.map((lead) => maskLead({ ...lead.toObject() }));
+  res.json(masked);
+});
+
 // @desc    Get leads purchased by the currently logged in user
 // @route   GET /api/leads/my-unlocked
 // @access  Private
@@ -620,6 +635,7 @@ module.exports = {
   publishLeadPublic,
   createLeadRazorpayOrder,
   verifyLeadPayment,
+  getMyTargetedLeads,
   getMyUnlockedLeads,
   submitPublicLead,
 };
