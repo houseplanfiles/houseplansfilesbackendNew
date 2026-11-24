@@ -128,17 +128,36 @@ const getProducts = asyncHandler(async (req, res) => {
   }
   const otherFilters = {};
   if (searchTerm) {
-    const searchRegex = { $regex: searchTerm, $options: "i" };
-    otherFilters.$or = [
-      { name: searchRegex },
-      { Name: searchRegex },
-      { description: searchRegex },
-      { Description: searchRegex },
-      { city: searchRegex },
-      { productNo: searchRegex },
-      { SKU: searchRegex },
-      { plotSize: searchRegex },
-    ];
+    const rawTerm = searchTerm.trim();
+    // Normalize dimension formats like 30*40, 30 x 40, 30 X 40 into 30x40 and 30X40
+    const normalizedDim = rawTerm.replace(/(\d+)\s*[\*xX]\s*(\d+)/g, "$1x$2");
+    const upperDim = rawTerm.replace(/(\d+)\s*[\*xX]\s*(\d+)/g, "$1X$2");
+
+    // Extract word tokens for multi-word flexible search
+    const tokens = rawTerm.split(/\s+/).filter(Boolean);
+    const searchTerms = Array.from(new Set([rawTerm, normalizedDim, upperDim, ...tokens]));
+
+    const orClauses = [];
+    searchTerms.forEach((term) => {
+      // Escape regex special chars except digits and letters
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = { $regex: escaped, $options: "i" };
+      orClauses.push(
+        { name: rx },
+        { Name: rx },
+        { description: rx },
+        { Description: rx },
+        { category: rx },
+        { Categories: rx },
+        { planType: rx },
+        { city: rx },
+        { productNo: rx },
+        { SKU: rx },
+        { plotSize: rx }
+      );
+    });
+
+    otherFilters.$or = orClauses;
   }
   if (country) otherFilters.country = country;
   if (category && category !== "all") otherFilters.category = category;
